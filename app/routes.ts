@@ -101,6 +101,7 @@ export const routes = route({
     members: route('/admin/miembros', {
       index: get('/'),
       create: post('/'),
+      update: post('/:id/datos'),
       role: post('/:id/rol'),
       password: post('/:id/password'),
       ban: post('/:id/desactivar'),

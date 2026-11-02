@@ -15,6 +15,7 @@ import {
   setMemberPassword,
   setMemberRole,
   unbanMember,
+  updateMember,
   type Actor,
 } from '../../../services/members.ts'
 import { MembersPage, type MembersPageProps } from './page.tsx'
@@ -26,11 +27,14 @@ const createSchema = z.object({
   role: roleField,
 })
 
+const updateSchema = z.object({ name: nameField, email: emailField })
+
 const roleSchema = z.object({ role: roleField })
 const passwordSchema = z.object({ password: passwordField })
 
 const FLASH: Record<string, string> = {
   created: 'Miembro agregado. Compártele su correo y contraseña.',
+  updated: 'Datos del miembro actualizados.',
   role: 'Rol actualizado.',
   password: 'Contraseña restablecida y sesiones del miembro cerradas.',
   banned: 'Miembro desactivado.',
@@ -79,6 +83,20 @@ export default createController(routes.admin.members, {
         return done('created')
       } catch (error) {
         return renderPage(context, user, { values, error: toUserMessage(error) }, 400)
+      }
+    },
+
+    async update(context) {
+      let parsed = parseForm(updateSchema, context.formData)
+      if (!parsed.ok || !parsed.data) {
+        let message = parsed.errors.name ?? parsed.errors.email ?? 'Datos inválidos.'
+        return renderPage(context, context.auth.identity, { error: message, editing: context.params.id }, 400)
+      }
+      try {
+        await updateMember(actorFrom(context), context.params.id, parsed.data)
+        return done('updated')
+      } catch (error) {
+        return renderPage(context, context.auth.identity, { error: toUserMessage(error), editing: context.params.id }, 400)
       }
     },
 

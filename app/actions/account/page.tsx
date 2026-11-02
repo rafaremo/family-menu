@@ -6,6 +6,7 @@ import { routes } from '../../routes.ts'
 import { TOKEN_EXPIRY_OPTIONS, type TokenSummary } from '../../services/tokens.ts'
 import { Flash, Layout } from '../../ui/layout.tsx'
 import { PasswordInput } from '../../ui/form.tsx'
+import { McpConnect } from '../../ui/mcp-connect.tsx'
 
 export interface NewToken {
   name: string
@@ -36,7 +37,7 @@ function Snippet(handle: Handle<{ id: string; title: string; hint?: string; code
         <summary>{title}</summary>
         {hint ? <p class="muted small">{hint}</p> : null}
         <textarea id={id} readOnly rows={Math.min(10, code.split('\n').length + 1)} defaultValue={code} />
-        <button type="button" class="secondary small" data-copy={`#${id}`} hidden>
+        <button type="button" class="secondary small" data-copy={`#${id}`}>
           Copiar
         </button>
       </details>
@@ -67,7 +68,7 @@ function NewTokenPanel(handle: Handle<{ token: NewToken; baseUrl: string; pathTo
         </p>
         <div class="row nowrap">
           <input id="new-token-key" readOnly value={token.key} aria-label="Token" class="mono" />
-          <button type="button" class="secondary small" data-copy="#new-token-key" hidden>
+          <button type="button" class="secondary small" data-copy="#new-token-key">
             Copiar
           </button>
         </div>
@@ -117,6 +118,8 @@ export function AccountPage(handle: Handle<AccountPageProps>) {
           Con un token, un asistente puede consultar y editar recetas, menús y listas en tu nombre (no puede administrar
           miembros). Crea uno por app o dispositivo para poder revocarlos por separado.
         </p>
+
+        <McpConnect baseUrl={baseUrl} pathTokensAllowed={pathTokensAllowed} />
 
         {newToken ? <NewTokenPanel token={newToken} baseUrl={baseUrl} pathTokensAllowed={pathTokensAllowed} /> : null}
 

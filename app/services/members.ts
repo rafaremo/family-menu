@@ -86,6 +86,32 @@ export async function createMember(
   return getMember(result.user.id)
 }
 
+/** Corrige nombre y/o correo de un miembro (el correo es con el que inicia sesión). */
+export async function updateMember(actor: Actor, userId: string, input: { name: string; email: string }): Promise<Member> {
+  let target = await getMember(userId)
+  let changes: { name?: string; email?: string } = {}
+  if (input.name !== target.name) changes.name = input.name
+  if (input.email !== target.email) {
+    let [taken] = await db.select({ id: user.id }).from(user).where(eq(user.email, input.email)).limit(1)
+    if (taken) throw new UserFacingError('Ya existe un miembro con ese correo.')
+    changes.email = input.email
+  }
+  if (!Object.keys(changes).length) return target
+
+  await auth.api.adminUpdateUser({ body: { userId, data: changes }, headers: actor.headers })
+  await audit({
+    userId: actor.identity.id,
+    via: actor.via,
+    action: 'update',
+    entity: 'member',
+    entityId: userId,
+    details: Object.fromEntries(
+      Object.entries(changes).map(([k, v]) => [k, { from: target[k as 'name' | 'email'], to: v }]),
+    ),
+  })
+  return getMember(userId)
+}
+
 export async function setMemberRole(actor: Actor, userId: string, role: Role): Promise<void> {
   assertNotSelf(actor, userId, 'No puedes cambiar tu propio rol.')
   let target = await getMember(userId)

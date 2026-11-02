@@ -205,10 +205,10 @@ export function ListShowPage(handle: Handle<ListShowProps>) {
           <summary>Texto para WhatsApp / Notas (solo lo pendiente)</summary>
           <textarea id="export-text" rows={10} readOnly defaultValue={exportText} />
           <div class="row">
-            <button type="button" class="secondary small" data-copy="#export-text" hidden>
+            <button type="button" class="secondary small" data-copy="#export-text">
               Copiar
             </button>
-            <button type="button" class="secondary small" data-share="#export-text" data-share-title={list.name} hidden>
+            <button type="button" class="secondary small" data-share="#export-text" data-share-title={list.name}>
               Compartir…
             </button>
             <a class="button secondary small" href={r.text.href({ id })}>

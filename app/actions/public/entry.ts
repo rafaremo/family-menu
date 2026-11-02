@@ -35,5 +35,5 @@ if (import.meta.hot) {
   })
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhance)
-else enhance()
+// Mejoras progresivas (delegadas en document: sobreviven a las navegaciones del runtime).
+enhance()

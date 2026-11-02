@@ -6,6 +6,7 @@ import { routes } from '../../routes.ts'
 import { MEALS, type MenuDetail } from '../../services/menus.ts'
 import type { RecipeCard as RecipeCardData } from '../../services/recipes.ts'
 import { Layout } from '../../ui/layout.tsx'
+import { McpConnect } from '../../ui/mcp-connect.tsx'
 import { RecipeCard } from '../../ui/recipe-card.tsx'
 
 export interface HomeProps {
@@ -13,6 +14,8 @@ export interface HomeProps {
   recent: RecipeCardData[]
   week: MenuDetail | null
   today: string
+  baseUrl: string
+  pathTokensAllowed: boolean
 }
 
 function WeekSummary(handle: Handle<{ week: MenuDetail; today: string }>) {
@@ -77,7 +80,7 @@ function WeekSummary(handle: Handle<{ week: MenuDetail; today: string }>) {
 
 export function HomePage(handle: Handle<HomeProps>) {
   return () => {
-    let { user, recent, week, today } = handle.props
+    let { user, recent, week, today, baseUrl, pathTokensAllowed } = handle.props
     let firstName = user.name.split(' ')[0]
 
     return (
@@ -136,6 +139,9 @@ export function HomePage(handle: Handle<HomeProps>) {
             </a>
           </div>
         )}
+
+        <h2>Asistentes</h2>
+        <McpConnect baseUrl={baseUrl} pathTokensAllowed={pathTokensAllowed} showTokenLink />
       </Layout>
     )
   }

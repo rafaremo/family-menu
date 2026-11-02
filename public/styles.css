@@ -395,3 +395,11 @@ button.check:hover { filter: none; background: var(--surface-2); }
 .import-photo input { width: auto; }
 .ing-hint { grid-column: 1 / -1; margin: -0.15rem 0 0.25rem; font-size: 0.78rem; color: var(--muted); }
 .badge.new { background: var(--ok-bg); color: var(--ok); }
+
+/* Conectar asistentes (MCP) */
+.mcp-connect .row.nowrap input { flex: 1; min-width: 0; }
+.mcp-connect .field-hint code { font-size: 0.85em; word-break: break-all; }
+
+/* Botones que dependen de APIs del navegador: se muestran solo si existen (ver enhance.ts). */
+[data-copy], [data-share] { display: none; }
+.can-copy [data-copy], .can-share [data-share] { display: inline-flex; }

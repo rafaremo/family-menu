@@ -189,6 +189,46 @@ describe('admin: miembros', () => {
     assert.equal(del.status, 400)
   })
 
+  it('fixes a member name and email; they log in with the new email', async () => {
+    let member = await createUser(MEMBER)
+    let res = await request(`/admin/miembros/${member.id}/datos`, {
+      form: { name: '  Monse Corregida ', email: 'Monse@Test.local' },
+      cookie: adminCookie,
+    })
+    assert.equal(res.status, 303)
+    assert.equal(res.headers.get('Location'), '/admin/miembros?ok=updated')
+    let [row] = await db.select().from(user).where(eq(user.id, member.id))
+    assert.equal(row?.name, 'Monse Corregida')
+    assert.equal(row?.email, 'monse@test.local')
+    await login('monse@test.local', MEMBER.password)
+    let old = await request('/login', { form: { email: MEMBER.email, password: MEMBER.password } })
+    assert.equal(old.status, 401)
+
+    let [entry] = await db.select().from(auditLog).where(eq(auditLog.action, 'update'))
+    assert.equal(entry?.entity, 'member')
+
+    // Correo ya usado por otro miembro, y validación.
+    let dup = await request(`/admin/miembros/${member.id}/datos`, { form: { name: 'Monse', email: ADMIN.email }, cookie: adminCookie })
+    assert.equal(dup.status, 400)
+    assert.match(await dup.text(), /Ya existe un miembro con ese correo/)
+    let empty = await request(`/admin/miembros/${member.id}/datos`, { form: { name: ' ', email: 'monse@test.local' }, cookie: adminCookie })
+    assert.equal(empty.status, 400)
+    assert.match(await empty.text(), /Escribe un nombre/)
+
+    // Un miembro normal no puede editar a nadie.
+    let memberCookie = await login('monse@test.local', MEMBER.password)
+    let forbidden = await request(`/admin/miembros/${member.id}/datos`, { form: { name: 'X', email: 'x@test.local' }, cookie: memberCookie })
+    assert.equal(forbidden.status, 403)
+  })
+
+  it('shows the MCP server URL to copy on the home page and in Mi cuenta', async () => {
+    let home = await (await request('/', { cookie: adminCookie })).text()
+    assert.match(home, /id="mcp-url"[^>]*value="https?:\/\/[^"]+\/mcp"|value="https?:\/\/[^"]+\/mcp"[^>]*id="mcp-url"/)
+    assert.match(home, /href="\/cuenta#tokens"/)
+    let account = await (await request('/cuenta', { cookie: adminCookie })).text()
+    assert.match(account, /URL del servidor MCP/)
+  })
+
   it('resets a member password and deletes a member', async () => {
     let member = await createUser(MEMBER)
     let reset = await request(`/admin/miembros/${member.id}/password`, {

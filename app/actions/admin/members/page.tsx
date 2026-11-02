@@ -14,13 +14,15 @@ export interface MembersPageProps {
   error?: string | null
   values?: { name: string; email: string; role: string }
   errors?: FieldErrors
+  /** Miembro cuyo formulario de edición se deja abierto (tras un error). */
+  editing?: string | null
 }
 
 const dateFmt = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' })
 
 export function MembersPage(handle: Handle<MembersPageProps>) {
   return () => {
-    let { user, members, ok, error, values, errors = {} } = handle.props
+    let { user, members, ok, error, values, errors = {}, editing } = handle.props
     let r = routes.admin.members
 
     return (
@@ -71,6 +73,31 @@ export function MembersPage(handle: Handle<MembersPageProps>) {
                     </td>
                     <td class="muted small" data-label="Alta">{dateFmt.format(m.createdAt)}</td>
                     <td class="stack" data-label="Acciones">
+                      <details open={editing === m.id}>
+                        <summary>Editar nombre o correo</summary>
+                        <form method="post" action={r.update.href({ id: m.id })} class="stack">
+                          <input
+                            name="name"
+                            required
+                            maxLength={80}
+                            defaultValue={m.name}
+                            autoComplete="off"
+                            aria-label={`Nombre de ${m.name}`}
+                          />
+                          <input
+                            name="email"
+                            type="email"
+                            required
+                            defaultValue={m.email}
+                            autoComplete="off"
+                            aria-label={`Correo de ${m.name}`}
+                          />
+                          <p class="field-hint">El correo es con el que inicia sesión; su contraseña no cambia.</p>
+                          <button type="submit" class="small">
+                            Guardar
+                          </button>
+                        </form>
+                      </details>
                       <details>
                         <summary>Restablecer contraseña</summary>
                         <form method="post" action={r.password.href({ id: m.id })} class="row">

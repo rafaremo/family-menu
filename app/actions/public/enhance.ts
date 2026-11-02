@@ -51,7 +51,20 @@ async function submitToggle(form: HTMLFormElement) {
   }
 }
 
+/**
+ * Todo va delegado en `document` y la visibilidad depende de clases en <html>, porque el runtime
+ * navega sin recargar la página: lo que se pinta después de una navegación también funciona.
+ */
 export function enhance() {
+  let root = document.documentElement
+  let flags = [navigator.clipboard ? 'can-copy' : '', typeof navigator.share === 'function' ? 'can-share' : ''].filter(Boolean)
+  let applyFlags = () => {
+    if (flags.some((f) => !root.classList.contains(f))) root.classList.add(...flags)
+  }
+  applyFlags()
+  // El runtime vuelve a poner los atributos de <html> del servidor al navegar: re-aplicamos.
+  if (flags.length) new MutationObserver(applyFlags).observe(root, { attributes: true, attributeFilter: ['class'] })
+
   document.addEventListener('submit', (event) => {
     let form = event.target
     if (!(form instanceof HTMLFormElement) || form.dataset.enhance !== 'toggle') return
@@ -59,26 +72,25 @@ export function enhance() {
     void submitToggle(form)
   })
 
-  for (let button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
-    if (!navigator.clipboard) continue
-    button.hidden = false
-    button.addEventListener('click', async () => {
-      let field = document.querySelector<HTMLTextAreaElement>(button.dataset.copy!)
+  document.addEventListener('click', (event) => {
+    let target = event.target instanceof Element ? event.target : null
+    let copy = target?.closest<HTMLButtonElement>('[data-copy]')
+    if (copy && navigator.clipboard) {
+      let field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(copy.dataset.copy!)
       if (!field) return
-      await navigator.clipboard.writeText(field.value)
-      let label = button.textContent
-      button.textContent = '¡Copiado!'
-      setTimeout(() => (button.textContent = label), 1500)
-    })
-  }
-
-  for (let button of document.querySelectorAll<HTMLButtonElement>('[data-share]')) {
-    if (typeof navigator.share !== 'function') continue
-    button.hidden = false
-    button.addEventListener('click', () => {
-      let field = document.querySelector<HTMLTextAreaElement>(button.dataset.share!)
+      void navigator.clipboard.writeText(field.value).then(() => {
+        let label = copy.dataset.label ?? copy.textContent ?? 'Copiar'
+        copy.dataset.label = label
+        copy.textContent = '¡Copiado!'
+        setTimeout(() => (copy.textContent = label), 1500)
+      })
+      return
+    }
+    let share = target?.closest<HTMLButtonElement>('[data-share]')
+    if (share && typeof navigator.share === 'function') {
+      let field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(share.dataset.share!)
       if (!field) return
-      navigator.share({ title: button.dataset.shareTitle, text: field.value }).catch(() => {})
-    })
-  }
+      navigator.share({ title: share.dataset.shareTitle, text: field.value }).catch(() => {})
+    }
+  })
 }
