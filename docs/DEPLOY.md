@@ -48,7 +48,8 @@ GitHub (rafaremo/family-menu) ──push──▶ Coolify build (Dockerfile)
 | `MCP_ALLOW_PATH_TOKEN` | `true` (Claude.ai / ChatGPT) o `false` |
 | `APP_TIMEZONE` | `America/Mexico_City` (default) |
 
-   La imagen ya define `NODE_ENV=production`, `PORT=3000` y `TRUST_PROXY=true`.
+   La imagen ya define `NODE_ENV=production`, `PORT=3000` y `TRUST_PROXY=true`. **No copies `PORT=3010`
+   de `.env.example`** (es solo para desarrollo): si cambias `PORT`, cambia también *Ports Exposes*.
    Sin variables `R2_*` las fotos se guardan en disco: en ese caso agrega un **Persistent Storage**
    montado en `/data/uploads`.
 
