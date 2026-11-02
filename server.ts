@@ -1,6 +1,7 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
+import { appStorageConfig } from './app/lib/storage.ts'
 import { router } from './app/router.ts'
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 3010
@@ -8,6 +9,9 @@ const hmrProxyPort = process.env.HMR_PROXY_PORT
   ? Number.parseInt(process.env.HMR_PROXY_PORT, 10)
   : null
 const isHmr = process.env.REMIX_NODE_HMR === '1'
+
+// Falla al arrancar (no al subir la primera foto) si el almacenamiento está mal configurado.
+const storage = appStorageConfig()
 
 const server = http.createServer(createRequestListener(router.fetch, { trustProxy: isHmr }))
 
@@ -17,6 +21,7 @@ server.listen(port, () => {
   }
 
   console.log(`Server listening on http://localhost:${hmrProxyPort ?? port}`)
+  console.log(`Archivos: ${storage.description}`)
 })
 
 let shuttingDown = false

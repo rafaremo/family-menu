@@ -1,16 +1,15 @@
 import { and, asc, eq, max } from 'drizzle-orm'
 import type { FileStorage } from 'remix/file-storage'
-import { createFsFileStorage } from 'remix/file-storage/fs'
-import { createMemoryFileStorage } from 'remix/file-storage/memory'
 
 import { db } from '../db/client.ts'
 import { recipe, recipePhoto } from '../db/schema/index.ts'
 import { UserFacingError } from '../lib/errors.ts'
 import { sniffImage } from '../lib/image.ts'
+import { namespacedStorage } from '../lib/storage.ts'
 import { audit, type ServiceActor } from './audit.ts'
 
 /**
- * Fotos de recetas en `UPLOADS_DIR` (volumen Docker en producción; memoria en pruebas).
+ * Fotos de recetas en el storage de la app (R2 o disco, ver `lib/storage.ts`), bajo `recetas/`.
  * Las llaves las genera el servidor; el nombre que manda el navegador nunca se usa como ruta.
  */
 
@@ -21,10 +20,7 @@ export const PHOTO_KEY_PATTERN = /^[0-9a-f-]{36}\.(jpg|png|webp|gif)$/
 let storage: FileStorage | undefined
 
 export function photoStorage(): FileStorage {
-  storage ??=
-    process.env.NODE_ENV === 'test'
-      ? createMemoryFileStorage()
-      : createFsFileStorage(process.env.UPLOADS_DIR ?? './uploads')
+  storage ??= namespacedStorage('recetas')
   return storage
 }
 
