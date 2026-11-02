@@ -1,5 +1,13 @@
 node_modules
 .env
+.env.*
+!.env.example
 uploads
-.git
 tmp
+.git
+.agents
+.agent-view
+test
+**/*.test.ts
+docs/plan.html
+docker-compose.yml

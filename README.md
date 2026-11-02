@@ -46,9 +46,16 @@ Servidor sin estado (Streamable HTTP, POST `/mcp`). 28 herramientas (recetas, in
 resources `recipe://{slug}` y `menu://{id}` en markdown, y prompts `planear_semana` y `capturar_receta`.
 La gestión de miembros **no** se expone por MCP. Cada llamada queda en `audit_log` con `via='mcp'`. Revocar un token corta el acceso al instante.
 
-## Producción
+## Producción (Coolify)
+
+Se despliega en **Coolify** con el `Dockerfile` y una **base PostgreSQL independiente** (recurso de Coolify);
+`docker-compose.yml` es solo para la BD de desarrollo. Al arrancar, el contenedor aplica migraciones, carga
+catálogos y crea el primer admin (`scripts/release.ts`). Fotos en Cloudflare R2; backups con los backups
+programados de Coolify hacia R2. Guía completa: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
 ```sh
-docker compose --profile prod up -d --build   # app en 127.0.0.1:3010
+docker build -t family-menu .
+docker run -p 3000:3000 -e DATABASE_URL=… -e BETTER_AUTH_SECRET=… -e BETTER_AUTH_URL=https://… family-menu
 ```
 
 ## Licencia

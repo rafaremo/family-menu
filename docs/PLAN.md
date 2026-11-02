@@ -24,7 +24,7 @@
 | Roles | `admin` + `member` |
 | Tenencia | Una sola familia por instancia |
 | Idioma | UI y datos en **español** |
-| Deploy | **Docker** (app + Postgres) con docker-compose en tu servidor |
+| Deploy | **Coolify** (build con el Dockerfile) + **PostgreSQL independiente** de Coolify; fotos en Cloudflare R2; backups de Coolify a R2 (ver `docs/DEPLOY.md`) |
 | Funciones de menú | Planeador semanal (día × comida), escalado por porciones, suma y conversión de unidades, lista agrupada por pasillo/tienda |
 | Extras v1 | Fotos de recetas, importar receta desde URL, etiquetas/categorías y favoritos |
 
@@ -245,7 +245,7 @@ Puertos locales: app `3010`, Postgres `127.0.0.1:5434` (el 5433 ya lo usa cfdi-e
 | 4 | Menús y lista | Cuadrícula semanal, motor de lista + pruebas, vista móvil de la lista, exportar | Un menú de 7 días genera una lista correcta y agrupada |
 | 5 | MCP | Servidor, todas las tools, tokens en `/cuenta`, auditoría, pruebas e2e con cliente MCP | Claude Code crea una receta, arma un menú y genera la lista |
 | 6 | Importar URL | Importador JSON-LD, parser de ingredientes en español + pruebas, vista previa | Importa correctamente 5 sitios de recetas populares en español |
-| 7 | Deploy | Dockerfile multi-stage, compose de producción, volumen de uploads, backups `pg_dump` (cron), HTTPS (reverse proxy o Cloudflare Tunnel) | Accesible por HTTPS y conectado desde Claude y ChatGPT |
+| 7 | Deploy | Dockerfile multi-stage + release (migraciones/seed) al arrancar, app en Coolify con Postgres independiente, fotos en R2, backups de Coolify a R2, HTTPS de Coolify | Accesible por HTTPS y conectado desde Claude y ChatGPT |
 | 8 | Pulido (opcional) | OAuth para MCP, PWA de la lista, sugerencias "no repetir platillos" | — |
 
 ---
@@ -287,3 +287,6 @@ Puertos locales: app `3010`, Postgres `127.0.0.1:5434` (el 5433 ya lo usa cfdi-e
 - [x] **Extra — Archivos en Cloudflare R2** (`rafaymon-bucket/family-menu/`, fotos servidas con sesión; disco como respaldo; `npm run storage:check`)
 - [x] **Fase 5 — MCP** (`/mcp` Streamable HTTP sin estado; Bearer o `/mcp/t/<token>`; 28 herramientas, resources `recipe://` y `menu://`, prompts `planear_semana` y `capturar_receta`; tokens por usuario en `/cuenta` con snippets para Claude Code/Desktop/Claude.ai/ChatGPT; cada llamada en la bitácora; pruebas e2e con el cliente del SDK —token válido, inválido, revocado, en ruta y dueño desactivado—; 116 pruebas)
 - [x] **Fase 6 — Importar URL** (`/recetas/importar` → vista previa en el editor con ingredientes empatados al catálogo, "nuevo" y texto original por renglón, foto opcional; JSON-LD schema.org (incl. `@graph`, HowToSection), objeto embebido tipo Kiwilimón y lectura aproximada por encabezados; parser de ingredientes en español; descarga anti-SSRF (IPs privadas bloqueadas en el `lookup`, redirecciones, tamaño, timeout); MCP `import_recipe_from_url` + `create_recipe.image_url`; probado en vivo con 9 sitios: Kiwilimón, Cookpad, Directo al Paladar, Cocina Fácil, Recetas Nestlé, Larousse Cocina, Pati Jinich, Las Recetas de Laura, Pequerecetas; 134 pruebas)
+- [x] **Fase 7 — Deploy (Coolify)** (Dockerfile de producción con `HEALTHCHECK`; `scripts/release.ts` al arrancar: valida config, espera la BD, migra, carga catálogos y crea el primer admin —idempotente—; `TRUST_PROXY` para Traefik; Postgres como recurso independiente de Coolify (compose solo para desarrollo); backups programados de Coolify a R2; guía en `docs/DEPLOY.md`; imagen probada localmente contra BD vacía: login con cookies `__Secure-`, assets minificados, CSRF, MCP, healthcheck y fallas de configuración)
+  - Pendiente (manual): crear la BD y la app en Coolify, registro DNS `menu.rafaymon.com` y `git push`.
+- [ ] Fase 8 — Pulido (opcional)

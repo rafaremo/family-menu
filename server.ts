@@ -9,11 +9,14 @@ const hmrProxyPort = process.env.HMR_PROXY_PORT
   ? Number.parseInt(process.env.HMR_PROXY_PORT, 10)
   : null
 const isHmr = process.env.REMIX_NODE_HMR === '1'
+// Detrás de un proxy (Coolify/Traefik) usamos X-Forwarded-Proto/Host para que request.url sea
+// la URL pública (https). Solo es seguro si el contenedor no es accesible sin pasar por el proxy.
+const trustProxy = isHmr || (process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 'true' : 'false')) === 'true'
 
 // Falla al arrancar (no al subir la primera foto) si el almacenamiento está mal configurado.
 const storage = appStorageConfig()
 
-const server = http.createServer(createRequestListener(router.fetch, { trustProxy: isHmr }))
+const server = http.createServer(createRequestListener(router.fetch, { trustProxy }))
 
 server.listen(port, () => {
   if (isHmr) {

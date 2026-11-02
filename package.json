@@ -12,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env node_modules/.bin/drizzle-kit migrate",
     "db:studio": "node --env-file-if-exists=.env node_modules/.bin/drizzle-kit studio",
+    "release": "node --env-file-if-exists=.env --import remix/node-tsx scripts/release.ts",
     "db:seed": "node --env-file-if-exists=.env --import remix/node-tsx scripts/seed.ts",
     "storage:check": "node --env-file-if-exists=.env --import remix/node-tsx scripts/storage-check.ts",
     "storage:migrate": "node --env-file-if-exists=.env --import remix/node-tsx scripts/migrate-photos.ts",
