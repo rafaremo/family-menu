@@ -1,5 +1,6 @@
 import type { FieldErrors } from '../../lib/validation.ts'
 import { formatQuantity } from '../../lib/quantity.ts'
+import type { RecipeDraft } from '../../services/importer.ts'
 import { recipeInput, type RecipeDetail, type RecipeInput } from '../../services/recipes.ts'
 import { readText } from '../../lib/validation.ts'
 
@@ -11,6 +12,9 @@ export interface IngredientRowValues {
   preparation: string
   group: string
   optional: boolean
+  /** Solo para mostrar (importación): texto original y si el ingrediente es nuevo. */
+  hint?: string
+  isNew?: boolean
 }
 
 export interface RecipeFormValues {
@@ -83,6 +87,33 @@ export function valuesFromRecipe(r: RecipeDetail): RecipeFormValues {
     tags: r.tags.map((t) => t.name),
     newTags: '',
     rows: withBlankRows(rows, 3, 6),
+  }
+}
+
+export function valuesFromDraft(d: RecipeDraft): RecipeFormValues {
+  let rows: IngredientRowValues[] = d.ingredients.map((i) => ({
+    quantity: formatQuantity(i.quantity, { plain: true }),
+    unit: i.unit ?? '',
+    ingredient: i.ingredient,
+    preparation: i.preparation ?? '',
+    group: i.group ?? '',
+    optional: i.optional,
+    hint: i.raw,
+    isNew: !i.matched,
+  }))
+  return {
+    title: d.title,
+    description: d.description ?? '',
+    servings: d.servings ? String(d.servings) : '4',
+    prepMinutes: d.prepMinutes === null ? '' : String(d.prepMinutes),
+    cookMinutes: d.cookMinutes === null ? '' : String(d.cookMinutes),
+    familyCredit: '',
+    sourceUrl: d.sourceUrl,
+    steps: d.steps.join('\n'),
+    notes: '',
+    tags: d.tags,
+    newTags: '',
+    rows: withBlankRows(rows, 2, 6),
   }
 }
 

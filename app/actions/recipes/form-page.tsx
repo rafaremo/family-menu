@@ -11,6 +11,14 @@ import { photoUrl } from '../../ui/format.ts'
 import { Flash, Layout } from '../../ui/layout.tsx'
 import { MAX_ROWS, ROWS_STEP, rowField, type RecipeFormValues } from './form.ts'
 
+export interface ImportInfo {
+  siteName: string
+  sourceUrl: string
+  imageUrl: string | null
+  approximate: boolean
+  newIngredients: number
+}
+
 export interface RecipeFormPageProps {
   user: Identity
   /** Si existe, es edición. */
@@ -22,15 +30,17 @@ export interface RecipeFormPageProps {
   units: Unit[]
   tags: Tag[]
   ingredientNames: string[]
+  /** Borrador importado de una URL (para mostrar el aviso y la foto). */
+  importInfo?: ImportInfo | null
 }
 
 const PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif'
 
 export function RecipeFormPage(handle: Handle<RecipeFormPageProps>) {
   return () => {
-    let { user, recipe, values, errors = {}, error, ok, units, tags, ingredientNames } = handle.props
+    let { user, recipe, values, errors = {}, error, ok, units, tags, ingredientNames, importInfo } = handle.props
     let r = routes.recipes
-    let title = recipe ? `Editar: ${recipe.title}` : 'Nueva receta'
+    let title = recipe ? `Editar: ${recipe.title}` : importInfo ? 'Revisar receta importada' : 'Nueva receta'
     let action = recipe ? r.update.href({ slug: recipe.slug }) : r.create.href()
     let rowErrors = Object.entries(errors).filter(([k]) => k.startsWith('ing.'))
     let checked = new Set(values.tags.map((t) => t.toLowerCase()))
@@ -54,6 +64,33 @@ export function RecipeFormPage(handle: Handle<RecipeFormPageProps>) {
             Guardar
           </button>
           <input type="hidden" name="rowCount" value={String(values.rows.length)} />
+          {importInfo ? (
+            <section class="card import-banner">
+              <input type="hidden" name="importSite" value={importInfo.siteName} />
+              <input type="hidden" name="importApprox" value={importInfo.approximate ? '1' : ''} />
+              <p>
+                <strong>Importada de {importInfo.siteName}.</strong> Revisa todo antes de guardar: cantidades, unidades y nombres
+                pueden necesitar ajustes.
+                {importInfo.newIngredients
+                  ? ` ${importInfo.newIngredients} ingrediente${importInfo.newIngredients === 1 ? '' : 's'} no está${importInfo.newIngredients === 1 ? '' : 'n'} en el catálogo (marcados “nuevo”) y se agregará${importInfo.newIngredients === 1 ? '' : 'n'} al guardar; si alguno ya existe con otro nombre, corrígelo.`
+                  : ''}
+              </p>
+              {importInfo.approximate ? (
+                <p class="alert error small">
+                  Esta página no publica la receta en formato estructurado; la leí “a ojo”. Revisa con más cuidado los
+                  ingredientes y los pasos.
+                </p>
+              ) : null}
+              {importInfo.imageUrl ? (
+                <label class="import-photo">
+                  <img src={importInfo.imageUrl} alt="Foto de la receta original" referrerPolicy="no-referrer" loading="lazy" />
+                  <span>
+                    <input type="checkbox" name="importImage" value={importInfo.imageUrl} checked /> Guardar esta foto con la receta
+                  </span>
+                </label>
+              ) : null}
+            </section>
+          ) : null}
 
           <section class="card form-grid">
             <div class="span-2">
@@ -167,6 +204,11 @@ export function RecipeFormPage(handle: Handle<RecipeFormPageProps>) {
                     </label>
                     {qtyError || nameError || otherError ? (
                       <p class="field-error ing-error">{qtyError ?? nameError ?? otherError}</p>
+                    ) : null}
+                    {row.hint ? (
+                      <p class="ing-hint">
+                        {row.isNew ? <span class="badge new">nuevo</span> : null} Original: “{row.hint}”
+                      </p>
                     ) : null}
                   </div>
                 )

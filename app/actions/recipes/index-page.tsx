@@ -46,9 +46,14 @@ export function RecipesIndexPage(handle: Handle<RecipesIndexProps>) {
       <Layout title="Recetas" user={user} section="recetas">
         <div class="page-head">
           <h1>Recetas</h1>
-          <a class="button" href={r.new.href()}>
-            + Nueva receta
-          </a>
+          <div class="row">
+            <a class="button secondary" href={r.importForm.href()}>
+              Importar de internet
+            </a>
+            <a class="button" href={r.new.href()}>
+              + Nueva receta
+            </a>
+          </div>
         </div>
         <Flash ok={ok} />
 

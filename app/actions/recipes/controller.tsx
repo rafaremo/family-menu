@@ -11,7 +11,8 @@ import { toUserMessage, UserFacingError } from '../../lib/errors.ts'
 import { parseId, readText } from '../../lib/validation.ts'
 import { routes } from '../../routes.ts'
 import { listTags, listUnits } from '../../services/catalogs.ts'
-import { addRecipePhotos, MAX_PHOTO_BYTES, realFiles, removeRecipePhoto, setCoverPhoto } from '../../services/photos.ts'
+import { importRecipeFromUrl } from '../../services/importer.ts'
+import { addRecipePhotoFromUrl, addRecipePhotos, MAX_PHOTO_BYTES, realFiles, removeRecipePhoto, setCoverPhoto } from '../../services/photos.ts'
 import {
   createRecipe,
   deleteRecipe,
@@ -24,14 +25,29 @@ import {
   type WriteResult,
 } from '../../services/recipes.ts'
 import { NotFound } from '../../ui/layout.tsx'
-import { emptyValues, parseRecipeForm, readValues, ROWS_STEP, valuesFromRecipe, withBlankRows } from './form.ts'
-import { RecipeFormPage, type RecipeFormPageProps } from './form-page.tsx'
+import { emptyValues, parseRecipeForm, readValues, ROWS_STEP, valuesFromDraft, valuesFromRecipe, withBlankRows } from './form.ts'
+import { RecipeFormPage, type ImportInfo, type RecipeFormPageProps } from './form-page.tsx'
+import { ImportPage } from './import-page.tsx'
 import { RecipesIndexPage, type RecipeFilters } from './index-page.tsx'
 import { RecipeShowPage } from './show-page.tsx'
 
 type Renderer = { render: (node: any, init?: ResponseInit) => Response | Promise<Response> }
 
 const r = routes.recipes
+
+/** Reconstruye el aviso de importación al volver a pintar el formulario (validación, renglones extra). */
+function importInfoFrom(form: FormData, values: { sourceUrl: string }): ImportInfo | null {
+  let site = readText(form, 'importSite')
+  if (!site) return null
+  let image = readText(form, 'importImage')
+  return {
+    siteName: site,
+    sourceUrl: values.sourceUrl,
+    imageUrl: /^https?:\/\//i.test(image) ? image : null,
+    approximate: readText(form, 'importApprox') === '1',
+    newIngredients: 0,
+  }
+}
 
 const FLASH: Record<string, string> = {
   created: 'Receta guardada.',
@@ -148,13 +164,15 @@ export default createController(r, {
       let user = context.auth.identity
       let values = readValues(context.formData)
 
+      let importInfo = importInfoFrom(context.formData, values)
+
       if (readText(context.formData, 'intent') === 'addRows') {
         values.rows = withBlankRows(values.rows, ROWS_STEP)
-        return renderForm(context, { user, values })
+        return renderForm(context, { user, values, importInfo })
       }
 
       let parsed = parseRecipeForm(values)
-      if (!parsed.ok || !parsed.data) return renderForm(context, { user, values, errors: parsed.errors }, 400)
+      if (!parsed.ok || !parsed.data) return renderForm(context, { user, values, errors: parsed.errors, importInfo }, 400)
 
       let photos = realFiles(context.formData.getAll('photos'))
       try {
@@ -162,6 +180,8 @@ export default createController(r, {
         let photoError = ''
         try {
           await addRecipePhotos(webActor(user), result.recipe.id, photos)
+          // Foto de la receta importada (si se dejó marcada).
+          if (importInfo?.imageUrl) await addRecipePhotoFromUrl(webActor(user), result.recipe.id, importInfo.imageUrl)
         } catch (error) {
           // La receta ya quedó guardada; avisamos y mandamos a editar para reintentar la foto.
           photoError = toUserMessage(error)
@@ -174,7 +194,32 @@ export default createController(r, {
         }
         return redirect(`${r.show.href({ slug: result.recipe.slug })}?ok=created${createdNote(result)}`, 303)
       } catch (error) {
-        return renderForm(context, { user, values, error: toUserMessage(error) }, 400)
+        return renderForm(context, { user, values, error: toUserMessage(error), importInfo }, 400)
+      }
+    },
+
+    importForm(context) {
+      return context.render(<ImportPage user={context.auth.identity} url={context.url.searchParams.get('url') ?? ''} />)
+    },
+
+    async importPreview(context) {
+      let user = context.auth.identity
+      let url = readText(context.formData, 'url').trim()
+      try {
+        let draft = await importRecipeFromUrl(url)
+        return renderForm(context, {
+          user,
+          values: valuesFromDraft(draft),
+          importInfo: {
+            siteName: draft.siteName,
+            sourceUrl: draft.sourceUrl,
+            imageUrl: draft.imageUrl,
+            approximate: draft.approximate,
+            newIngredients: draft.ingredients.filter((i) => !i.matched).length,
+          },
+        })
+      } catch (error) {
+        return context.render(<ImportPage user={user} url={url} error={toUserMessage(error)} />, { status: 400 })
       }
     },
 

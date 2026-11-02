@@ -386,3 +386,12 @@ button.check:hover { filter: none; background: var(--surface-2); }
 .new-token h4 { margin: 1rem 0 0.4rem; }
 .snippet { margin-top: 0.5rem; }
 .snippet textarea { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; margin: 0.4rem 0; white-space: pre; }
+
+/* Importar receta */
+.import-banner { border-color: var(--accent); }
+.import-banner p { margin: 0 0 0.6rem; }
+.import-photo { display: flex; gap: 0.9rem; align-items: center; font-weight: 500; margin: 0; cursor: pointer; }
+.import-photo img { width: 140px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; }
+.import-photo input { width: auto; }
+.ing-hint { grid-column: 1 / -1; margin: -0.15rem 0 0.25rem; font-size: 0.78rem; color: var(--muted); }
+.badge.new { background: var(--ok-bg); color: var(--ok); }

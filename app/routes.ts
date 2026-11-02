@@ -38,6 +38,8 @@ export const routes = route({
     index: get('/'),
     new: get('/nueva'),
     create: post('/'),
+    importForm: get('/importar'),
+    importPreview: post('/importar'),
     show: get('/:slug'),
     edit: get('/:slug/editar'),
     update: post('/:slug/editar'),

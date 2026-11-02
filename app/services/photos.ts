@@ -5,6 +5,7 @@ import { db } from '../db/client.ts'
 import { recipe, recipePhoto } from '../db/schema/index.ts'
 import { UserFacingError } from '../lib/errors.ts'
 import { sniffImage } from '../lib/image.ts'
+import { safeFetch } from '../lib/safe-fetch.ts'
 import { namespacedStorage } from '../lib/storage.ts'
 import { audit, type ServiceActor } from './audit.ts'
 
@@ -138,4 +139,12 @@ export async function getPhotoFile(key: string): Promise<File | null> {
   let [row] = await db.select({ id: recipePhoto.id }).from(recipePhoto).where(eq(recipePhoto.storageKey, key)).limit(1)
   if (!row) return null
   return (await photoStorage().get(key)) ?? null
+}
+
+/** Descarga una foto de internet (p. ej. la de una receta importada) y la agrega a la receta. */
+export async function addRecipePhotoFromUrl(actor: ServiceActor, recipeId: number, url: string): Promise<RecipePhoto> {
+  let res = await safeFetch(url, { maxBytes: MAX_PHOTO_BYTES, accept: 'image/avif,image/webp,image/jpeg,image/png,image/*;q=0.8' })
+  let name = new URL(res.url).pathname.split('/').pop() || 'foto'
+  let [photo] = await addRecipePhotos(actor, recipeId, [new File([new Uint8Array(res.body)], name, { type: res.contentType })])
+  return photo!
 }

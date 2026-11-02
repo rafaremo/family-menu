@@ -2,6 +2,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import * as z from 'zod'
 
 import { slugify } from '../../lib/slug.ts'
+import { toUserMessage } from '../../lib/errors.ts'
+import { importRecipeFromUrl } from '../../services/importer.ts'
+import { addRecipePhotoFromUrl } from '../../services/photos.ts'
 import { resolveRecipe } from '../../services/menus.ts'
 import {
   createRecipe,
@@ -156,9 +159,67 @@ export function registerRecipeTools(server: McpServer, ctx: McpContext) {
       title: 'Crear receta',
       description:
         'Guarda una receta nueva en el recetario. Usa ingredientes estructurados (cantidad + unidad + ingrediente). Antes de inventar ingredientes nuevos busca con search_ingredients; los que no existan se crean solos. Ej. ingrediente: {"ingredient":"cebolla","quantity":"1/2","unit":"pz","preparation":"picada"}.',
-      inputSchema: { title: z.string().min(1).describe('Nombre de la receta.'), ...recipeFields },
+      inputSchema: {
+        title: z.string().min(1).describe('Nombre de la receta.'),
+        ...recipeFields,
+        image_url: z.string().url().optional().describe('URL de una foto para guardarla con la receta (p. ej. la del borrador importado).'),
+      },
     },
-    async (args) => writeSummary(await createRecipe(ctx.actor, recipeInput.parse(toServiceInput(args)))),
+    async ({ image_url, ...args }) => {
+      let result = await createRecipe(ctx.actor, recipeInput.parse(toServiceInput(args)))
+      let photo: string | null = null
+      if (image_url) {
+        try {
+          await addRecipePhotoFromUrl(ctx.actor, result.recipe.id, image_url)
+          photo = 'guardada'
+        } catch (error) {
+          photo = `no se pudo guardar: ${toUserMessage(error)}`
+        }
+      }
+      return { ...writeSummary(result), ...(image_url ? { photo } : {}) }
+    },
+  )
+
+  defineTool(
+    server,
+    ctx,
+    'import_recipe_from_url',
+    {
+      title: 'Importar receta de una URL',
+      description:
+        'Lee una receta de una página web (Kiwilimón, Cookpad, Directo al Paladar, blogs…) y regresa un BORRADOR sin guardar: ingredientes ya separados en cantidad/unidad/nombre y empatados con el catálogo (matched=false = ingrediente nuevo). Revisa y corrige con el usuario, y luego guárdala con create_recipe (pasa source_url e image_url).',
+      inputSchema: { url: z.string().url().describe('URL de la página de la receta.') },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+    async ({ url }) => {
+      let draft = await importRecipeFromUrl(url)
+      return {
+        draft: {
+          title: draft.title,
+          description: draft.description,
+          servings: draft.servings,
+          prep_minutes: draft.prepMinutes,
+          cook_minutes: draft.cookMinutes,
+          source_url: draft.sourceUrl,
+          image_url: draft.imageUrl,
+          tags: draft.tags,
+          steps: draft.steps,
+          ingredients: draft.ingredients.map((i) => ({
+            ingredient: i.ingredient,
+            quantity: i.quantity ?? undefined,
+            unit: i.unit ?? undefined,
+            preparation: i.preparation ?? undefined,
+            group: i.group ?? undefined,
+            optional: i.optional || undefined,
+            matched: i.matched,
+            original: i.raw,
+          })),
+        },
+        site: draft.siteName,
+        ...(draft.approximate ? { warning: 'La página no tiene datos estructurados; se leyó de forma aproximada. Revisa con cuidado.' } : {}),
+        newIngredients: draft.ingredients.filter((i) => !i.matched).map((i) => i.ingredient),
+      }
+    },
   )
 
   defineTool(

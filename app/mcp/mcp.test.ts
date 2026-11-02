@@ -7,7 +7,10 @@ import { afterEach, beforeEach, describe, it } from 'remix/test'
 import { db } from '../db/client.ts'
 import { auditLog, user } from '../db/schema/index.ts'
 import { router } from '../router.ts'
+import { readFileSync } from 'node:fs'
+
 import { seedCatalogs } from '../services/catalog-seed.ts'
+import { importerTesting } from '../services/importer.ts'
 import { createToken, listTokens } from '../services/tokens.ts'
 import { createUser, login, ORIGIN, request, resetDb } from '../../test/helpers.ts'
 
@@ -97,6 +100,7 @@ describe('MCP', () => {
       'list_tags', 'list_aisles', 'list_stores', 'list_units',
       'list_menus', 'get_menu', 'create_menu', 'add_menu_item', 'update_menu_item', 'remove_menu_item', 'copy_menu',
       'generate_shopping_list', 'get_shopping_list', 'add_list_item', 'check_list_items', 'export_shopping_list',
+      'import_recipe_from_url',
     ]) {
       assert.ok(names.includes(expected), `falta la herramienta ${expected}`)
     }
@@ -223,6 +227,38 @@ describe('MCP', () => {
     let moved = await call(client, 'update_ingredient', { ingredient: 'jitomate', store: 'costco', grams_per_piece: 110 })
     assert.equal(moved.json.store, 'Costco')
     assert.equal(moved.json.gramsPerPiece, 110)
+  })
+
+  it('imports a recipe draft from a URL, then saves it (reporting a blocked photo)', async () => {
+    importerTesting.fetchHtml = async (url) => ({
+      url,
+      html: readFileSync(new URL('../../test/fixtures/recipes/wordpress-yoast.html', import.meta.url), 'utf8'),
+    })
+    try {
+      let client = await connect()
+      let imported = await call(client, 'import_recipe_from_url', { url: 'https://ejemplo.mx/pozole/' })
+      assert.equal(imported.isError, false, imported.text)
+      let draft = imported.json.draft
+      assert.equal(draft.title, 'Pozole rojo de la casa')
+      assert.equal(draft.servings, 8)
+      assert.deepEqual(imported.json.newIngredients, ['Maíz pozolero precocido', 'Lechuga', 'Rábanos'].filter((n: string) => imported.json.newIngredients.includes(n)))
+      let lomo = draft.ingredients.find((i: any) => i.original === '1 kg de lomo de cerdo en trozos')
+      assert.deepEqual([lomo.ingredient, lomo.quantity, lomo.unit, lomo.matched], ['Lomo de cerdo', 1, 'kg', true])
+
+      let saved = await call(client, 'create_recipe', {
+        title: draft.title,
+        servings: draft.servings,
+        steps: draft.steps,
+        source_url: draft.source_url,
+        image_url: 'http://127.0.0.1/foto.jpg',
+        ingredients: draft.ingredients.map(({ matched, original, ...rest }: any) => rest),
+      })
+      assert.equal(saved.isError, false, saved.text)
+      assert.equal(saved.json.recipe.sourceUrl, 'https://ejemplo.mx/pozole/')
+      assert.match(saved.json.photo, /no se pudo guardar: Esa dirección no está permitida/)
+    } finally {
+      importerTesting.fetchHtml = null
+    }
   })
 
   it('exposes recipes and menus as resources, and the planning prompts', async () => {

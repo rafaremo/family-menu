@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs'
 import * as assert from 'remix/assert'
-import { beforeEach, describe, it } from 'remix/test'
+import { afterEach, beforeEach, describe, it } from 'remix/test'
 
 import { db } from '../db/client.ts'
 import { recipe } from '../db/schema/index.ts'
 import { seedCatalogs } from '../services/catalog-seed.ts'
+import { importerTesting } from '../services/importer.ts'
 import { getRecipeBySlug } from '../services/recipes.ts'
 import { createUser, login, request, resetDb, TINY_PNG } from '../../test/helpers.ts'
 
@@ -191,5 +193,63 @@ describe('dashboard: recetas', () => {
     assert.equal((await request('/recetas/../../etc', { cookie })).status, 404)
     assert.equal((await request('/fotos/00000000-0000-0000-0000-000000000000.png', { cookie })).status, 404)
     assert.equal((await request('/fotos/..%2F.env', { cookie })).status, 404)
+  })
+})
+
+describe('dashboard: importar receta', () => {
+  beforeEach(async () => {
+    await resetDb()
+    await seedCatalogs()
+    await createUser(MEMBER)
+    cookie = await login(MEMBER.email, MEMBER.password)
+    importerTesting.fetchHtml = async (url) => ({
+      url,
+      html: readFileSync(new URL('../../test/fixtures/recipes/kiwilimon.html', import.meta.url), 'utf8'),
+    })
+  })
+  afterEach(() => {
+    importerTesting.fetchHtml = null
+  })
+
+  it('previews an imported recipe in the editor and saves it', async () => {
+    let page = await (await request('/recetas/importar', { cookie })).text()
+    assert.match(page, /Importar receta de internet/)
+
+    let preview = await request('/recetas/importar', { cookie, form: { url: 'https://www.kiwilimon.com/receta/tinga' } })
+    assert.equal(preview.status, 200)
+    let html = await preview.text()
+    assert.match(html, /Revisar receta importada/)
+    assert.match(html, /Importada de kiwilimon\.com/)
+    assert.match(html, /value="Clásica Tinga de Pollo"/)
+    assert.match(html, /value="Chiles chipotles adobados"/)
+    assert.match(html, /Original: “3 chiles chipotles en lata”/)
+    assert.match(html, /name="importImage" value="https:\/\/cdn7\.kiwilimon\.com/)
+    assert.match(html, /value="https:\/\/www\.kiwilimon\.com\/receta\/tinga"/)
+
+    // Guardar (sin la foto: su descarga real queda fuera de las pruebas).
+    let form = new FormData()
+    for (let [k, v] of Object.entries({ title: 'Clásica Tinga de Pollo', servings: '5', sourceUrl: 'https://www.kiwilimon.com/receta/tinga', steps: 'Cocer.\nLicuar.', importSite: 'kiwilimon.com' })) {
+      form.set(k, v)
+    }
+    form.set('rowCount', '1')
+    form.set('ing[0][quantity]', '1')
+    form.set('ing[0][ingredient]', 'Pechuga de pollo')
+    let saved = await request('/recetas', { cookie, multipart: form })
+    assert.equal(saved.status, 303)
+    let detail = await getRecipeBySlug('clasica-tinga-de-pollo')
+    assert.equal(detail.sourceUrl, 'https://www.kiwilimon.com/receta/tinga')
+  })
+
+  it('shows clear errors for bad or blocked URLs', async () => {
+    importerTesting.fetchHtml = null
+    let bad = await request('/recetas/importar', { cookie, form: { url: 'no-es-url' } })
+    assert.equal(bad.status, 400)
+    assert.match(await bad.text(), /no parece una URL válida/)
+    let local = await request('/recetas/importar', { cookie, form: { url: 'http://localhost/health' } })
+    assert.match(await local.text(), /no está permitida/)
+
+    importerTesting.fetchHtml = async (url) => ({ url, html: '<html><body>nada</body></html>' })
+    let none = await request('/recetas/importar', { cookie, form: { url: 'https://blog.mx/' } })
+    assert.match(await none.text(), /No encontré una receta/)
   })
 })

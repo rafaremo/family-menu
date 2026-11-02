@@ -15,6 +15,7 @@ export const SERVER_INFO = { name: 'family-menu', version: '1.0.0' }
 const INSTRUCTIONS = `Family Menu: recetario familiar, menús semanales y lista del súper (todo en español).
 - Antes de crear recetas, busca ingredientes con search_ingredients para reutilizar nombres; los nuevos se crean solos.
 - Las cantidades van estructuradas: quantity + unit (g, kg, ml, l, taza, cda, cdta, pz, lata, manojo, diente…).
+- Para recetas de internet: import_recipe_from_url → revisar con el usuario → create_recipe (con source_url e image_url).
 - Flujo típico: create_menu (semana) → add_menu_item por día y comida → generate_shopping_list → export_shopping_list.
 - Las fechas son AAAA-MM-DD; las semanas empiezan en lunes. Hoy es ${todayIso()}.
 - No borres nada sin confirmarlo con el usuario.`
