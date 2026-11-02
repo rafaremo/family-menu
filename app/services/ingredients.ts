@@ -2,11 +2,12 @@ import { and, arrayOverlaps, asc, count, eq, ne, sql, type SQL } from 'drizzle-o
 import * as z from 'zod'
 
 import { db } from '../db/client.ts'
-import { aisle, ingredient, store, unit } from '../db/schema/index.ts'
+import { aisle, ingredient, recipeIngredient, store, unit } from '../db/schema/index.ts'
 import { PG_FOREIGN_KEY_VIOLATION, PG_UNIQUE_VIOLATION, pgErrorCode, UserFacingError } from '../lib/errors.ts'
 import { cleanText, normalizeKey, slugify } from '../lib/slug.ts'
 import { optionalDecimal, optionalId, optionalText, textList } from '../lib/validation.ts'
 import { audit, type ServiceActor } from './audit.ts'
+import { recipeIdsUsingIngredient, refreshRecipeSearchText } from './recipe-search.ts'
 
 /**
  * Ingredientes: catálogo compartido de la familia.
@@ -313,13 +314,20 @@ export async function updateIngredient(actor: ServiceActor, id: number, patch: I
     .where(eq(ingredient.id, id))
     .catch(writeError)
 
+  if (renamed || patch.aliases) await refreshRecipeSearchText(await recipeIdsUsingIngredient(id))
   await audit({ ...actor, action: 'update', entity: 'ingredient', entityId: String(id), details: { ...patch } })
   return getIngredient(id)
 }
 
 export async function removeIngredient(actor: ServiceActor, id: number): Promise<void> {
   let current = await getIngredient(id)
-  // Fase 3: impedir borrar si alguna receta lo usa (sugerir fusionar).
+  let usedBy = await recipeIdsUsingIngredient(id)
+  if (usedBy.length) {
+    throw new UserFacingError(
+      `"${current.name}" se usa en ${usedBy.length} receta(s). Fusiónalo con otro ingrediente en vez de eliminarlo.`,
+      409,
+    )
+  }
   try {
     await db.delete(ingredient).where(eq(ingredient.id, id))
   } catch (error) {
@@ -342,8 +350,10 @@ export async function mergeIngredients(actor: ServiceActor, sourceId: number, ta
 
   let names = normalizeNames(target.name, [...target.aliases, source.name, ...source.aliases])
 
+  let affectedRecipes = await recipeIdsUsingIngredient(sourceId)
   await db.transaction(async (tx) => {
-    // Fase 3: mover recipe_ingredient (y renglones de listas) de source → target antes de borrar.
+    // Las recetas que usaban el duplicado ahora apuntan al destino. (Fase 4: también renglones de listas.)
+    await tx.update(recipeIngredient).set({ ingredientId: targetId }).where(eq(recipeIngredient.ingredientId, sourceId))
     await tx.delete(ingredient).where(eq(ingredient.id, sourceId))
     await tx
       .update(ingredient)
@@ -360,6 +370,7 @@ export async function mergeIngredients(actor: ServiceActor, sourceId: number, ta
       .where(eq(ingredient.id, targetId))
   })
 
+  await refreshRecipeSearchText(affectedRecipes)
   await audit({
     ...actor,
     action: 'merge',

@@ -281,5 +281,6 @@ Puertos locales: app `3010`, Postgres `127.0.0.1:5434` (el 5433 ya lo usa cfdi-e
 - [x] **Fase 0 — Scaffold** (`remix new`, Drizzle, Postgres en Docker, `/health`, Dockerfile, MIT)
 - [x] **Fase 1 — Auth y miembros** (Better Auth + admin/apiKey, login/logout, `/admin/miembros`, `/cuenta`, seed del admin, bitácora, 17 pruebas)
 - [x] **Fase 2 — Catálogos e ingredientes** (pasillos, tiendas, unidades y etiquetas con seed; `/catalogos` admin; `/ingredientes` CRUD con alias, búsqueda difusa `pg_trgm` sin acentos, fusionar duplicados; 84 ingredientes base; 52 pruebas)
-  - Pendiente para fase 3: al fusionar/borrar ingredientes, mover/validar `recipe_ingredient` (marcado con `// Fase 3:` en `services/ingredients.ts`).
-- [ ] Fase 3 — Recetas
+- [x] **Fase 3 — Recetas** (CRUD con editor de ingredientes sin JS —`<datalist>` para autocompletar, renglones extra por servidor—, grupos y opcionales, fotos con portada —validadas por sus bytes, servidas solo con sesión—, etiquetas (las nuevas se crean libres), favoritas, búsqueda full-text en español + trigramas + filtros por ingrediente/etiqueta/favoritas, escalado por porciones, vista imprimible; fusionar ingredientes mueve sus recetas; 80 pruebas)
+  - Notas: las fotos se guardan tal cual (sin redimensionar); el editor es 100 % HTML (una isla con autocompletado/reordenar puede llegar en la fase 8).
+- [ ] Fase 4 — Menús y lista

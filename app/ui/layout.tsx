@@ -26,7 +26,7 @@ export function Layout(handle: Handle<LayoutProps>) {
 
     let items: NavItem[] = [
       { section: 'home', label: 'Inicio', href: routes.dashboard.home.href() },
-      { section: 'recetas', label: 'Recetas' },
+      { section: 'recetas', label: 'Recetas', href: routes.recipes.index.href() },
       { section: 'ingredientes', label: 'Ingredientes', href: routes.ingredients.index.href() },
       { section: 'menus', label: 'Menús' },
       { section: 'listas', label: 'Listas' },

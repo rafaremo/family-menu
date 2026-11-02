@@ -7,6 +7,7 @@ import { PG_FOREIGN_KEY_VIOLATION, PG_UNIQUE_VIOLATION, pgErrorCode, UserFacingE
 import { cleanText, slugify } from '../lib/slug.ts'
 import { optionalDecimal, sortOrderField } from '../lib/validation.ts'
 import { audit, type ServiceActor } from './audit.ts'
+import { recipeIdsWithTag, refreshRecipeSearchText } from './recipe-search.ts'
 
 /**
  * Catálogos: pasillos, tiendas, unidades y etiquetas.
@@ -233,12 +234,15 @@ export async function updateTag(actor: ServiceActor, id: number, input: TagInput
     .where(eq(tag.id, id))
     .returning()
     .catch((e) => uniqueError(e, TAG_DUPLICATE))
+  await refreshRecipeSearchText(await recipeIdsWithTag(id))
   await audit({ ...actor, action: 'update', entity: 'tag', entityId: String(id), details: { ...input } })
   return row!
 }
 
 export async function removeTag(actor: ServiceActor, id: number): Promise<void> {
   let row = await getTag(id)
+  let affected = await recipeIdsWithTag(id)
   await db.delete(tag).where(eq(tag.id, id))
+  await refreshRecipeSearchText(affected)
   await audit({ ...actor, action: 'delete', entity: 'tag', entityId: String(id), details: { name: row.name } })
 }

@@ -26,6 +26,24 @@ export const routes = route({
     merge: post('/:id/fusionar'),
   }),
 
+  recipes: route('/recetas', {
+    index: get('/'),
+    new: get('/nueva'),
+    create: post('/'),
+    show: get('/:slug'),
+    edit: get('/:slug/editar'),
+    update: post('/:slug/editar'),
+    destroy: post('/:slug/eliminar'),
+    favorite: post('/:slug/favorita'),
+    photoAdd: post('/:slug/fotos'),
+    photoCover: post('/:slug/fotos/:photoId/portada'),
+    photoDestroy: post('/:slug/fotos/:photoId/eliminar'),
+  }),
+
+  photos: route('/fotos', {
+    show: get('/*key'),
+  }),
+
   catalogs: route('/catalogos', {
     index: get('/'),
     aisleCreate: post('/pasillos'),

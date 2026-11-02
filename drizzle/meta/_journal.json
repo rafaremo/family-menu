@@ -15,6 +15,13 @@
       "when": 1793583053783,
       "tag": "0001_catalogs_and_ingredients",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793584525291,
+      "tag": "0002_recipes",
+      "breakpoints": true
     }
   ]
 }
