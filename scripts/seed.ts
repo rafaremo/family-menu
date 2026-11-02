@@ -1,7 +1,7 @@
 /**
  * Seed idempotente.
  *  - Crea el admin inicial desde ADMIN_EMAIL / ADMIN_PASSWORD / ADMIN_NAME si aún no hay ningún admin.
- *  (Fase 2 agregará unidades, pasillos, tiendas y etiquetas.)
+ *  - Carga pasillos, tiendas, unidades, etiquetas e ingredientes base (cada catálogo solo si está vacío).
  *
  * Uso: npm run db:seed
  */
@@ -11,6 +11,7 @@ import { auth } from '../app/auth/auth.ts'
 import { db, pool } from '../app/db/client.ts'
 import { user } from '../app/db/schema/index.ts'
 import { audit } from '../app/services/audit.ts'
+import { seedCatalogs } from '../app/services/catalog-seed.ts'
 
 async function seedAdmin() {
   let [existingAdmin] = await db.select({ id: user.id }).from(user).where(eq(user.role, 'admin')).limit(1)
@@ -47,8 +48,25 @@ async function seedAdmin() {
   console.log(`✓ Admin creado: ${email}`)
 }
 
+async function seedCatalogData() {
+  let report = await seedCatalogs()
+  let parts = Object.entries(report)
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => `${n} ${CATALOG_LABELS[k as keyof typeof report]}`)
+  console.log(parts.length ? `✓ Catálogos cargados: ${parts.join(', ')}.` : '✓ Catálogos ya tenían datos; no se tocaron.')
+}
+
+const CATALOG_LABELS = {
+  aisles: 'pasillos',
+  stores: 'tiendas',
+  units: 'unidades',
+  tags: 'etiquetas',
+  ingredients: 'ingredientes',
+}
+
 try {
   await seedAdmin()
+  await seedCatalogData()
 } finally {
   await pool.end()
 }

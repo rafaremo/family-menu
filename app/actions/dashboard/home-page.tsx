@@ -29,13 +29,21 @@ export function HomePage(handle: Handle<{ user: Identity }>) {
             </div>
           ))}
         </div>
-        {user.role === 'admin' ? (
-          <p>
-            <a class="button" href={routes.admin.members.index.href()}>
-              Administrar miembros
-            </a>
-          </p>
-        ) : null}
+        <p class="row">
+          <a class="button" href={routes.ingredients.index.href()}>
+            Ingredientes
+          </a>
+          {user.role === 'admin' ? (
+            <>
+              <a class="button secondary" href={routes.catalogs.index.href()}>
+                Catálogos
+              </a>
+              <a class="button secondary" href={routes.admin.members.index.href()}>
+                Administrar miembros
+              </a>
+            </>
+          ) : null}
+        </p>
       </Layout>
     )
   }

@@ -4,7 +4,7 @@ import { Document } from '../actions/document.tsx'
 import type { Identity } from '../auth/middleware.ts'
 import { routes } from '../routes.ts'
 
-export type Section = 'home' | 'recetas' | 'menus' | 'listas' | 'admin' | 'cuenta'
+export type Section = 'home' | 'recetas' | 'ingredientes' | 'menus' | 'listas' | 'catalogos' | 'admin' | 'cuenta'
 
 export interface LayoutProps {
   title: string
@@ -27,8 +27,10 @@ export function Layout(handle: Handle<LayoutProps>) {
     let items: NavItem[] = [
       { section: 'home', label: 'Inicio', href: routes.dashboard.home.href() },
       { section: 'recetas', label: 'Recetas' },
+      { section: 'ingredientes', label: 'Ingredientes', href: routes.ingredients.index.href() },
       { section: 'menus', label: 'Menús' },
       { section: 'listas', label: 'Listas' },
+      { section: 'catalogos', label: 'Catálogos', href: routes.catalogs.index.href(), adminOnly: true },
       { section: 'admin', label: 'Miembros', href: routes.admin.members.index.href(), adminOnly: true },
     ]
 
@@ -91,6 +93,26 @@ export function Flash(handle: Handle<{ ok?: string | null; error?: string | null
           </p>
         ) : null}
       </>
+    )
+  }
+}
+
+/** Página 404 dentro del layout. */
+export function NotFound(handle: Handle<{ user: Identity; message?: string; backHref?: string; backLabel?: string }>) {
+  return () => {
+    let { user, message, backHref, backLabel } = handle.props
+    return (
+      <Layout title="No encontrado" user={user}>
+        <h1>No encontrado</h1>
+        <p class="muted">{message ?? 'Lo que buscas no existe o fue eliminado.'}</p>
+        {backHref ? (
+          <p>
+            <a class="button secondary" href={backHref}>
+              {backLabel ?? 'Regresar'}
+            </a>
+          </p>
+        ) : null}
+      </Layout>
     )
   }
 }

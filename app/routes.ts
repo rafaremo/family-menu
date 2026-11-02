@@ -16,6 +16,32 @@ export const routes = route({
     password: post('/password'),
   }),
 
+  ingredients: route('/ingredientes', {
+    index: get('/'),
+    new: get('/nuevo'),
+    create: post('/'),
+    edit: get('/:id'),
+    update: post('/:id'),
+    destroy: post('/:id/eliminar'),
+    merge: post('/:id/fusionar'),
+  }),
+
+  catalogs: route('/catalogos', {
+    index: get('/'),
+    aisleCreate: post('/pasillos'),
+    aisleUpdate: post('/pasillos/:id'),
+    aisleDestroy: post('/pasillos/:id/eliminar'),
+    storeCreate: post('/tiendas'),
+    storeUpdate: post('/tiendas/:id'),
+    storeDestroy: post('/tiendas/:id/eliminar'),
+    unitCreate: post('/unidades'),
+    unitUpdate: post('/unidades/:code'),
+    unitDestroy: post('/unidades/:code/eliminar'),
+    tagCreate: post('/etiquetas'),
+    tagUpdate: post('/etiquetas/:id'),
+    tagDestroy: post('/etiquetas/:id/eliminar'),
+  }),
+
   admin: {
     members: route('/admin/miembros', {
       index: get('/'),

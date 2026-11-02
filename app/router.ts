@@ -5,6 +5,8 @@ import { createRouter, type RouterContext } from 'remix/router'
 
 import accountController from './actions/account/controller.tsx'
 import membersController from './actions/admin/members/controller.tsx'
+import catalogsController from './actions/catalogs/controller.tsx'
+import ingredientsController from './actions/ingredients/controller.tsx'
 import controller from './actions/controller.tsx'
 import dashboardController from './actions/dashboard/controller.tsx'
 import loginController from './actions/login/controller.tsx'
@@ -33,4 +35,6 @@ router.map(routes, controller)
 router.map(routes.dashboard, dashboardController)
 router.map(routes.login, loginController)
 router.map(routes.account, accountController)
+router.map(routes.ingredients, ingredientsController)
+router.map(routes.catalogs, catalogsController)
 router.map(routes.admin.members, membersController)

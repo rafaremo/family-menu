@@ -8,7 +8,9 @@ export const ORIGIN = new URL(process.env.BETTER_AUTH_URL ?? 'http://localhost:3
 
 /** Borra todos los datos (no el esquema). */
 export async function resetDb() {
-  await db.execute(sql`truncate table "audit_log", "apikey", "verification", "session", "account", "user" restart identity cascade`)
+  await db.execute(
+    sql`truncate table "ingredient", "tag", "unit", "store", "aisle", "audit_log", "apikey", "verification", "session", "account", "user" restart identity cascade`,
+  )
 }
 
 export async function createUser(input: { email: string; password: string; name: string; role: 'admin' | 'member' }) {

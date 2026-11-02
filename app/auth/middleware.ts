@@ -3,6 +3,7 @@ import { redirect } from 'remix/response/redirect'
 import type { Middleware } from 'remix/router'
 
 import { routes } from '../routes.ts'
+import type { ServiceActor } from '../services/audit.ts'
 import { auth, type Role } from './auth.ts'
 
 /** Identidad que ven los controladores en `context.auth.identity`. */
@@ -72,4 +73,9 @@ export function requireAdmin(): Middleware {
     }
     return next()
   }
+}
+
+/** Actor para los servicios de dominio cuando la acción viene del dashboard. */
+export function webActor(identity: Identity): ServiceActor {
+  return { userId: identity.id, via: 'web' }
 }

@@ -3,6 +3,12 @@ import { auditLog } from '../db/schema/index.ts'
 
 export type AuditVia = 'web' | 'mcp' | 'system'
 
+/** Quién hace un cambio en los servicios de dominio (dashboard o MCP). */
+export interface ServiceActor {
+  userId: string | null
+  via: AuditVia
+}
+
 export interface AuditEntry {
   userId: string | null
   via: AuditVia

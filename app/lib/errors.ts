@@ -24,6 +24,20 @@ export class UserFacingError extends Error {
   }
 }
 
+/** Código de error de Postgres (busca en la cadena `cause`, Drizzle envuelve los errores). */
+export function pgErrorCode(error: unknown): string | undefined {
+  let current: unknown = error
+  for (let depth = 0; current && depth < 5; depth++) {
+    let code = (current as { code?: unknown }).code
+    if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) return code
+    current = (current as { cause?: unknown }).cause
+  }
+  return undefined
+}
+
+export const PG_UNIQUE_VIOLATION = '23505'
+export const PG_FOREIGN_KEY_VIOLATION = '23503'
+
 export function toUserMessage(error: unknown, fallback = 'Ocurrió un error inesperado.'): string {
   if (error instanceof UserFacingError) return error.message
   if (error instanceof APIError) {
