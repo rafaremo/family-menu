@@ -37,7 +37,7 @@ Action-level `middleware` inside `createController({ actions })` does not type-c
 
 - Full plan: `docs/PLAN.md`. Update its "Estado" checklist when a phase is completed.
 - UI text and domain data are in **Spanish**; code identifiers in English.
-- Node ≥ 24.3 is required. On this VPS: `eval "$(~/.local/share/fnm/fnm env)" && fnm use`.
+- Node ≥ 24.3 is required. On this VPS, fnm (`--use-on-cd` in `~/.zshrc`) switches to Node 24 automatically when you `cd` into the project (reads `.nvmrc`). Non-interactive shells: `export PATH="$HOME/.local/share/fnm:$PATH"; eval "$(fnm env)"; fnm use`.
 - Business logic lives in `app/services/*`; dashboard actions and MCP tools are thin wrappers around it.
 - DB: Drizzle ORM (`app/db/`), migrations in `drizzle/`. Postgres dev at `127.0.0.1:5434` (`npm run db:up`).
 - Auth: Better Auth (plugins `admin`, `apiKey`), mounted at `/api/auth/*`. No public sign-up. After changing plugins run `npm run auth:generate` then `npm run db:generate`.

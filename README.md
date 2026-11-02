@@ -9,7 +9,7 @@ Se administra desde un dashboard web y desde Claude o ChatGPT vía **MCP**.
 Remix 3 (`remix/router`, `remix/component`) · TypeScript · Better Auth · PostgreSQL 17 + Drizzle · MCP SDK (Streamable HTTP) · Docker
 
 ## Requisitos
-- Node **≥ 24.3** (`.nvmrc`). En el VPS: `eval "$(~/.local/share/fnm/fnm env)" && fnm use`
+- Node **≥ 24.3** (`.nvmrc`). En el VPS: cambia solo a Node 24 al entrar a la carpeta (fnm con `--use-on-cd` en `~/.zshrc`, lee `.nvmrc`)
 - Docker
 
 ## Desarrollo
