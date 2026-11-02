@@ -8,12 +8,20 @@ export const routes = route({
   // Better Auth (cualquier método)
   authApi: '/api/auth/*path',
 
+  // MCP (Streamable HTTP). Token en header Bearer o en la ruta.
+  mcp: {
+    endpoint: '/mcp',
+    withToken: '/mcp/t/:token',
+  },
+
   login: form('/login'),
   logout: post('/logout'),
 
   account: route('/cuenta', {
     index: get('/'),
     password: post('/password'),
+    tokenCreate: post('/tokens'),
+    tokenRevoke: post('/tokens/:id/revocar'),
   }),
 
   ingredients: route('/ingredientes', {

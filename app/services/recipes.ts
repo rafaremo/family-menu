@@ -495,7 +495,9 @@ async function resolveIngredientLines(actor: ServiceActor, lines: RecipeIngredie
     if (byKey.has(key)) continue
     let found = await findIngredientByName(line.ingredient)
     if (!found) {
-      found = await createIngredient(actor, { name: line.ingredient, defaultUnit: resolvedUnits[index] ?? null })
+      // Como el catálogo: primera letra en mayúscula ("chile morita" → "Chile morita").
+      let name = line.ingredient.charAt(0).toLocaleUpperCase('es') + line.ingredient.slice(1)
+      found = await createIngredient(actor, { name, defaultUnit: resolvedUnits[index] ?? null })
       created.push(found.name)
     }
     byKey.set(key, found)

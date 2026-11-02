@@ -285,4 +285,6 @@ Puertos locales: app `3010`, Postgres `127.0.0.1:5434` (el 5433 ya lo usa cfdi-e
   - Notas: las fotos se guardan tal cual (sin redimensionar); el editor es 100 % HTML (una isla con autocompletado/reordenar puede llegar en la fase 8).
 - [x] **Fase 4 — Menús y lista** (cuadrícula semanal día × comida con porciones por platillo, copiar/mover semana; motor de lista puro —escalado, conversión g/ml/pz con densidad y g por pieza, empaques redondeados, "al gusto", opcionales— agrupado por tienda y pasillo; regenerar conserva lo manual y lo palomeado; lista móvil con palomeo instantáneo (mejora progresiva, funciona sin JS), exportar a WhatsApp/texto; inicio con el menú de la semana; 108 pruebas)
 - [x] **Extra — Archivos en Cloudflare R2** (`rafaymon-bucket/family-menu/`, fotos servidas con sesión; disco como respaldo; `npm run storage:check`)
-- [ ] Fase 5 — MCP
+- [x] **Fase 5 — MCP** (`/mcp` Streamable HTTP sin estado; Bearer o `/mcp/t/<token>`; 28 herramientas, resources `recipe://` y `menu://`, prompts `planear_semana` y `capturar_receta`; tokens por usuario en `/cuenta` con snippets para Claude Code/Desktop/Claude.ai/ChatGPT; cada llamada en la bitácora; pruebas e2e con el cliente del SDK —token válido, inválido, revocado, en ruta y dueño desactivado—; 116 pruebas)
+  - Pendiente fase 6: `import_recipe_from_url`.
+- [ ] Fase 6 — Importar URL

@@ -33,6 +33,19 @@ npm run dev               # http://localhost:3010  (o npm run hmr)
 | `npm run typecheck` | TypeScript |
 | `npm run db:generate` / `db:migrate` / `db:studio` | Drizzle |
 
+## MCP (Claude / ChatGPT)
+
+1. En el dashboard: **Mi cuenta → Tokens → Crear token**. El token (`fm_…`) se muestra una sola vez, con snippets listos.
+2. Conecta tu cliente:
+   - **Claude Code:** `claude mcp add --transport http family-menu https://menu.rafaymon.com/mcp --header "Authorization: Bearer fm_…"`
+   - **Claude Desktop:** `npx -y mcp-remote https://menu.rafaymon.com/mcp --header "Authorization: Bearer fm_…"` en `claude_desktop_config.json`.
+   - **Claude.ai / ChatGPT** (no permiten headers): `https://menu.rafaymon.com/mcp/t/fm_…` — la URL es secreta (se desactiva con `MCP_ALLOW_PATH_TOKEN=false`).
+3. Prueba: “¿qué hay en el menú de esta semana?”, “guarda la receta de tinga de mi abuela”, “arma el menú de la próxima semana y genera la lista del súper”.
+
+Servidor sin estado (Streamable HTTP, POST `/mcp`). 28 herramientas (recetas, ingredientes, catálogos, menús, lista, `whoami`),
+resources `recipe://{slug}` y `menu://{id}` en markdown, y prompts `planear_semana` y `capturar_receta`.
+La gestión de miembros **no** se expone por MCP. Cada llamada queda en `audit_log` con `via='mcp'`. Revocar un token corta el acceso al instante.
+
 ## Producción
 ```sh
 docker compose --profile prod up -d --build   # app en 127.0.0.1:3010

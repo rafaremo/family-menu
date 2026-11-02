@@ -14,6 +14,7 @@ import recipesController from './actions/recipes/controller.tsx'
 import controller from './actions/controller.tsx'
 import dashboardController from './actions/dashboard/controller.tsx'
 import loginController from './actions/login/controller.tsx'
+import mcpController from './actions/mcp/controller.ts'
 import { assets } from './assets.ts'
 import { routes } from './routes.ts'
 
@@ -38,6 +39,7 @@ declare module 'remix' {
 router.map(routes, controller)
 router.map(routes.dashboard, dashboardController)
 router.map(routes.login, loginController)
+router.map(routes.mcp, mcpController)
 router.map(routes.account, accountController)
 router.map(routes.ingredients, ingredientsController)
 router.map(routes.recipes, recipesController)

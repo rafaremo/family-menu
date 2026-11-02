@@ -379,3 +379,10 @@ button.check:hover { filter: none; background: var(--surface-2); }
   }
   table.compact-mobile tr { padding: 0.6rem 0; }
 }
+
+/* Tokens MCP */
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.new-token { border-color: var(--accent); margin-bottom: 1rem; }
+.new-token h4 { margin: 1rem 0 0.4rem; }
+.snippet { margin-top: 0.5rem; }
+.snippet textarea { font-family: ui-monospace, Menlo, monospace; font-size: 0.8rem; margin: 0.4rem 0; white-space: pre; }
