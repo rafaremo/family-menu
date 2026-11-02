@@ -5,6 +5,8 @@ import {
 } from 'remix/multiple-import-maps-polyfill'
 import { run } from 'remix/component'
 
+import { enhance } from './enhance.ts'
+
 const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await importModule(moduleUrl)
@@ -32,3 +34,6 @@ if (import.meta.hot) {
     }
   })
 }
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhance)
+else enhance()

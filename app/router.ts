@@ -7,6 +7,8 @@ import accountController from './actions/account/controller.tsx'
 import membersController from './actions/admin/members/controller.tsx'
 import catalogsController from './actions/catalogs/controller.tsx'
 import ingredientsController from './actions/ingredients/controller.tsx'
+import listsController from './actions/lists/controller.tsx'
+import menusController from './actions/menus/controller.tsx'
 import photosController from './actions/photos/controller.tsx'
 import recipesController from './actions/recipes/controller.tsx'
 import controller from './actions/controller.tsx'
@@ -40,5 +42,7 @@ router.map(routes.account, accountController)
 router.map(routes.ingredients, ingredientsController)
 router.map(routes.recipes, recipesController)
 router.map(routes.photos, photosController)
+router.map(routes.menus, menusController)
+router.map(routes.lists, listsController)
 router.map(routes.catalogs, catalogsController)
 router.map(routes.admin.members, membersController)

@@ -232,6 +232,85 @@ button.fav.on { background: var(--accent); }
 .steps li::marker { font-weight: 700; color: var(--accent); }
 .notes { white-space: pre-line; }
 
+/* Menús */
+.menu-list { display: grid; gap: 0.6rem; }
+.menu-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; text-decoration: none; color: inherit; padding: 0.9rem 1.1rem; }
+.menu-row:hover { border-color: var(--accent); }
+.menu-row.current { border-color: var(--accent); }
+.menu-row.done { opacity: 0.65; }
+.menu-row .badge { margin-left: 0.5rem; }
+.right { text-align: right; }
+.menu-row progress { width: 6rem; display: block; }
+.progress-text { font-weight: 700; font-size: 0.9rem; }
+.narrow-wide { max-width: 560px; }
+
+.week-grid { display: grid; gap: 0.4rem; margin-bottom: 1rem; }
+.week-row { display: grid; grid-template-columns: 7.5rem repeat(4, minmax(0, 1fr)); gap: 0.4rem; }
+.week-head span { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 0 0.5rem; }
+.week-day { display: flex; flex-direction: column; justify-content: center; gap: 0.1rem; padding: 0.5rem; }
+.week-day .badge { align-self: flex-start; }
+.week-row.today .week-cell { border-color: var(--accent); }
+.week-cell {
+  position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.45rem 0.55rem 1.6rem; min-height: 4.2rem; font-size: 0.92rem;
+}
+.week-cell.empty { background: transparent; border-style: dashed; }
+.meal-label { display: none; }
+.menu-item + .menu-item { margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed var(--line); }
+.menu-item a { color: var(--fg); font-weight: 600; text-decoration: none; }
+.menu-item a:hover { color: var(--accent); }
+.item-edit summary { color: var(--muted); font-size: 0.8rem; }
+.item-edit[open] { background: var(--surface-2); border-radius: 8px; padding: 0.4rem; margin-top: 0.25rem; }
+.item-edit input { width: 4.5rem; padding: 0.3rem; }
+.item-edit form + form { margin-top: 0.4rem; }
+.add-link {
+  position: absolute; right: 0.35rem; bottom: 0.25rem; width: 1.5rem; height: 1.5rem; border-radius: 999px;
+  display: grid; place-items: center; text-decoration: none; color: var(--muted); font-weight: 700;
+}
+.add-link:hover { background: var(--accent); color: var(--accent-ink); }
+.add-item-form { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
+.add-item-form select { width: auto; max-width: 100%; }
+
+/* Inicio */
+.home-week h3 { font-size: 0.95rem; margin: 1rem 0 0.4rem; }
+.today-meals { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.3rem; }
+
+/* Lista del súper */
+.list-progress { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; }
+.list-progress progress { width: 7rem; }
+progress { accent-color: var(--accent); height: 0.6rem; }
+.list-actions { margin-bottom: 0.5rem; }
+.list-store h2 { margin: 1.25rem 0 0.5rem; }
+.list-aisle { padding: 0.6rem 0.9rem; margin-bottom: 0.6rem; }
+.list-aisle h3 { margin: 0.1rem 0 0.3rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.list-items { list-style: none; margin: 0; padding: 0; }
+.list-item { display: flex; align-items: center; gap: 0.3rem; border-bottom: 1px solid var(--line); scroll-margin-top: 6rem; }
+.list-item:last-child { border-bottom: 0; }
+.item-toggle { flex: 1; min-width: 0; }
+button.check {
+  width: 100%; background: none; color: var(--fg); border: 0; padding: 0.65rem 0.1rem; justify-content: flex-start;
+  gap: 0.75rem; font-weight: 400; text-align: left; border-radius: 0;
+}
+button.check:hover { filter: none; background: var(--surface-2); }
+.check .box {
+  flex: none; width: 1.5rem; height: 1.5rem; border-radius: 6px; border: 2px solid var(--line);
+  display: grid; place-items: center; color: transparent; font-size: 0.95rem; font-weight: 800;
+}
+.item-text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.6rem; min-width: 0; }
+.item-label { font-size: 1.05rem; }
+.item-amount { color: var(--muted); font-weight: 600; font-size: 0.95rem; }
+.list-item.checked .box { background: var(--ok); border-color: var(--ok); color: #fff; }
+.list-item.checked .item-label, .list-item.checked .item-amount { text-decoration: line-through; opacity: 0.5; }
+.item-more { flex: none; }
+.item-more summary { list-style: none; padding: 0.4rem 0.6rem; color: var(--muted); font-size: 1.2rem; }
+.item-more summary::-webkit-details-marker { display: none; }
+.item-more[open] {
+  position: absolute; right: 1.5rem; z-index: 6; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.4rem 0.75rem 0.75rem; box-shadow: var(--shadow); max-width: 20rem;
+}
+.list-aisle { position: relative; }
+#export-text { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; margin: 0.5rem 0; }
+
 @media print {
   .topbar, .no-print, .sticky-actions { display: none !important; }
   body { background: #fff; color: #000; }
@@ -280,6 +359,16 @@ button.fav.on { background: var(--accent); }
   .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
   .recipe-card-body { padding: 0.6rem 0.75rem 0.75rem; }
   .row.three { flex-wrap: wrap; }
+
+  /* Menú: un bloque por día */
+  .week-head { display: none; }
+  .week-row { grid-template-columns: 1fr 1fr; padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+  .week-day { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 0.5rem; padding: 0 0 0.2rem; }
+  .meal-label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .week-cell { min-height: 3.6rem; }
+  .week-cell.empty { min-height: 2.3rem; padding-bottom: 0.45rem; }
+  .add-item-form > * { width: 100%; }
+  .add-item-form select { width: 100%; }
 
   /* Listas compactas: los datos secundarios van en un solo renglón (“Abarrotes · gramo”). */
   table.compact-mobile td.meta { display: inline; padding: 0; color: var(--muted); font-size: 0.9rem; }

@@ -9,7 +9,7 @@ export const ORIGIN = new URL(process.env.BETTER_AUTH_URL ?? 'http://localhost:3
 /** Borra todos los datos (no el esquema). */
 export async function resetDb() {
   await db.execute(
-    sql`truncate table "favorite", "recipe_tag", "recipe_photo", "recipe_ingredient", "recipe", "ingredient", "tag", "unit", "store", "aisle", "audit_log", "apikey", "verification", "session", "account", "user" restart identity cascade`,
+    sql`truncate table "shopping_list_item", "shopping_list", "menu_item", "menu", "favorite", "recipe_tag", "recipe_photo", "recipe_ingredient", "recipe", "ingredient", "tag", "unit", "store", "aisle", "audit_log", "apikey", "verification", "session", "account", "user" restart identity cascade`,
   )
 }
 

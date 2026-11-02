@@ -28,8 +28,8 @@ export function Layout(handle: Handle<LayoutProps>) {
       { section: 'home', label: 'Inicio', href: routes.dashboard.home.href() },
       { section: 'recetas', label: 'Recetas', href: routes.recipes.index.href() },
       { section: 'ingredientes', label: 'Ingredientes', href: routes.ingredients.index.href() },
-      { section: 'menus', label: 'Menús' },
-      { section: 'listas', label: 'Listas' },
+      { section: 'menus', label: 'Menús', href: routes.menus.index.href() },
+      { section: 'listas', label: 'Listas', href: routes.lists.index.href() },
       { section: 'catalogos', label: 'Catálogos', href: routes.catalogs.index.href(), adminOnly: true },
       { section: 'admin', label: 'Miembros', href: routes.admin.members.index.href(), adminOnly: true },
     ]

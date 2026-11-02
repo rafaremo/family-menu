@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -224,4 +225,93 @@ export const favorite = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.recipeId] }), index('favorite_recipe_idx').on(table.recipeId)],
+)
+
+// ─── Menús ────────────────────────────────────────────────────────────────────
+
+export const mealKind = pgEnum('meal_kind', ['desayuno', 'comida', 'cena', 'colacion'])
+
+export const menu = pgTable(
+  'menu',
+  {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(),
+    /** Lunes de la semana (YYYY-MM-DD). */
+    weekStart: date('week_start', { mode: 'string' }).notNull(),
+    defaultServings: integer('default_servings').notNull().default(4),
+    notes: text('notes'),
+    createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('menu_week_idx').on(table.weekStart)],
+)
+
+export const menuItem = pgTable(
+  'menu_item',
+  {
+    id: serial('id').primaryKey(),
+    menuId: integer('menu_id')
+      .notNull()
+      .references(() => menu.id, { onDelete: 'cascade' }),
+    date: date('date', { mode: 'string' }).notNull(),
+    meal: mealKind('meal').notNull(),
+    recipeId: integer('recipe_id')
+      .notNull()
+      .references(() => recipe.id, { onDelete: 'cascade' }),
+    servings: integer('servings').notNull(),
+    position: integer('position').notNull().default(0),
+    notes: text('notes'),
+  },
+  (table) => [index('menu_item_menu_idx').on(table.menuId, table.date), index('menu_item_recipe_idx').on(table.recipeId)],
+)
+
+// ─── Listas del súper ─────────────────────────────────────────────────────────
+
+export const listStatus = pgEnum('list_status', ['abierta', 'completada'])
+export const listItemSource = pgEnum('list_item_source', ['generated', 'manual'])
+
+export interface SourceRecipe {
+  recipe: string
+  qty: string
+}
+
+export const shoppingList = pgTable(
+  'shopping_list',
+  {
+    id: serial('id').primaryKey(),
+    menuId: integer('menu_id').references(() => menu.id, { onDelete: 'set null' }),
+    name: text('name').notNull(),
+    status: listStatus('status').notNull().default('abierta'),
+    includeOptional: boolean('include_optional').notNull().default(false),
+    generatedAt: timestamp('generated_at', { withTimezone: true }),
+    createdBy: text('created_by').references(() => user.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('shopping_list_menu_idx').on(table.menuId)],
+)
+
+export const shoppingListItem = pgTable(
+  'shopping_list_item',
+  {
+    id: serial('id').primaryKey(),
+    listId: integer('list_id')
+      .notNull()
+      .references(() => shoppingList.id, { onDelete: 'cascade' }),
+    ingredientId: integer('ingredient_id').references(() => ingredient.id, { onDelete: 'set null' }),
+    label: text('label').notNull(),
+    quantity: numeric('quantity', { mode: 'number' }),
+    unitCode: text('unit_code').references(() => unit.code, { onDelete: 'set null', onUpdate: 'cascade' }),
+    aisleId: integer('aisle_id').references(() => aisle.id, { onDelete: 'set null' }),
+    storeId: integer('store_id').references(() => store.id, { onDelete: 'set null' }),
+    checked: boolean('checked').notNull().default(false),
+    source: listItemSource('source').notNull().default('manual'),
+    /** Para regenerar: identifica el renglón generado (ingrediente + dimensión/unidad). */
+    mergeKey: text('merge_key'),
+    sourceRecipes: jsonb('source_recipes').$type<SourceRecipe[]>().notNull().default([]),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index('shopping_list_item_list_idx').on(table.listId), index('shopping_list_item_ingredient_idx').on(table.ingredientId)],
 )

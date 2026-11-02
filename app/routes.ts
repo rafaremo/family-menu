@@ -40,6 +40,33 @@ export const routes = route({
     photoDestroy: post('/:slug/fotos/:photoId/eliminar'),
   }),
 
+  menus: route('/menus', {
+    index: get('/'),
+    create: post('/'),
+    show: get('/:id'),
+    update: post('/:id'),
+    destroy: post('/:id/eliminar'),
+    copy: post('/:id/copiar'),
+    itemAdd: post('/:id/platillos'),
+    itemUpdate: post('/:id/platillos/:itemId'),
+    itemDestroy: post('/:id/platillos/:itemId/eliminar'),
+    generateList: post('/:id/lista'),
+  }),
+
+  lists: route('/listas', {
+    index: get('/'),
+    create: post('/'),
+    show: get('/:id'),
+    text: get('/:id/texto'),
+    update: post('/:id'),
+    destroy: post('/:id/eliminar'),
+    regenerate: post('/:id/regenerar'),
+    clearChecked: post('/:id/limpiar'),
+    itemAdd: post('/:id/articulos'),
+    itemCheck: post('/:id/articulos/:itemId/marcar'),
+    itemDestroy: post('/:id/articulos/:itemId/eliminar'),
+  }),
+
   photos: route('/fotos', {
     show: get('/*key'),
   }),

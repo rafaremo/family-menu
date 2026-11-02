@@ -2,7 +2,7 @@ import { and, arrayOverlaps, asc, count, eq, ne, sql, type SQL } from 'drizzle-o
 import * as z from 'zod'
 
 import { db } from '../db/client.ts'
-import { aisle, ingredient, recipeIngredient, store, unit } from '../db/schema/index.ts'
+import { aisle, ingredient, recipeIngredient, shoppingListItem, store, unit } from '../db/schema/index.ts'
 import { PG_FOREIGN_KEY_VIOLATION, PG_UNIQUE_VIOLATION, pgErrorCode, UserFacingError } from '../lib/errors.ts'
 import { cleanText, normalizeKey, slugify } from '../lib/slug.ts'
 import { optionalDecimal, optionalId, optionalText, textList } from '../lib/validation.ts'
@@ -352,8 +352,9 @@ export async function mergeIngredients(actor: ServiceActor, sourceId: number, ta
 
   let affectedRecipes = await recipeIdsUsingIngredient(sourceId)
   await db.transaction(async (tx) => {
-    // Las recetas que usaban el duplicado ahora apuntan al destino. (Fase 4: también renglones de listas.)
+    // Las recetas y listas que usaban el duplicado ahora apuntan al destino.
     await tx.update(recipeIngredient).set({ ingredientId: targetId }).where(eq(recipeIngredient.ingredientId, sourceId))
+    await tx.update(shoppingListItem).set({ ingredientId: targetId }).where(eq(shoppingListItem.ingredientId, sourceId))
     await tx.delete(ingredient).where(eq(ingredient.id, sourceId))
     await tx
       .update(ingredient)
