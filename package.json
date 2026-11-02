@@ -1,0 +1,44 @@
+{
+  "name": "family-menu",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --env-file-if-exists=.env --watch --import remix/node-tsx server.ts",
+    "hmr": "NODE_ENV=development node --env-file-if-exists=.env hmr.ts",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env --import remix/node-tsx server.ts",
+    "test": "NODE_ENV=test node --env-file-if-exists=.env node_modules/.bin/remix test",
+    "typecheck": "tsc --noEmit",
+    "db:up": "docker compose up -d db",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env node_modules/.bin/drizzle-kit migrate",
+    "db:studio": "node --env-file-if-exists=.env node_modules/.bin/drizzle-kit studio"
+  },
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "better-auth": "1.7.15",
+    "drizzle-orm": "0.45.4",
+    "pg": "8.23.1",
+    "remix": "3.1.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "0.31.11",
+    "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.27.7": true,
+    "esbuild@0.28.2": true
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafaremo/family-menu.git"
+  }
+}

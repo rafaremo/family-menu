@@ -1,0 +1,503 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Family Menu — Plan</title>
+<style>
+:root{--bg:#fffaf3;--fg:#2b2118;--muted:#7a6a5a;--accent:#c2562b;--card:#fff;--line:#eadfce}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:2.2rem;color:var(--accent);margin:.2em 0}h2{margin-top:2.2em;padding-bottom:.3em;border-bottom:2px solid var(--line)}h3{color:var(--accent)}
+blockquote{margin:0;padding:12px 16px;background:#fdf0e4;border-left:4px solid var(--accent);border-radius:6px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;background:var(--card);margin:1em 0;font-size:.93rem;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px #0001}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f6ebdc}
+code{background:#f3e8d9;padding:1px 5px;border-radius:4px;font-size:.88em}
+pre{background:#2b2118;color:#f8efe3;padding:16px;border-radius:8px;overflow:auto;line-height:1.35}pre code{background:none;color:inherit;padding:0}
+a{color:var(--accent)}hr{border:none;border-top:1px solid var(--line);margin:2em 0}
+</style></head><body><main><h1>Family Menu — Plan de implementación</h1>
+<blockquote>
+<p>Recetario familiar + base de ingredientes + planeador de menús semanales que genera la lista del súper.
+Administrado vía <strong>MCP</strong> (Claude / ChatGPT) y un <strong>dashboard web</strong> autenticado.</p>
+</blockquote>
+<ul>
+<li><strong>Ubicación del proyecto:</strong> <code>/root/workspace/code/family-menu</code></li>
+<li><strong>Repo:</strong> GitHub <code>rafaremo/family-menu</code> — licencia <strong>MIT</strong></li>
+<li><strong>Dominio:</strong> <code>https://menu.rafaymon.com</code></li>
+<li><strong>Fecha del plan:</strong> 2026-11-01</li>
+</ul>
+<hr>
+<h2>1. Decisiones tomadas</h2>
+<table>
+<thead>
+<tr>
+<th>Tema</th>
+<th>Decisión</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Framework</td>
+<td><strong>Remix 3</strong> (<code>remix@3.1.x</code>, el nuevo, sin React): <code>remix/router</code>, <code>remix/component</code> (JSX en servidor + islas hidratadas), middleware, file-storage</td>
+</tr>
+<tr>
+<td>Lenguaje</td>
+<td>TypeScript estricto, ESM, <strong>Node ≥ 24.3</strong> (requerido por Remix 3; en el servidor vía <code>fnm</code>, ver <code>.nvmrc</code>)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td><strong>Better Auth</strong> (<code>better-auth@1.7.x</code>) con plugins <code>admin</code> y <code>apiKey</code></td>
+</tr>
+<tr>
+<td>BD</td>
+<td><strong>PostgreSQL 17</strong></td>
+</tr>
+<tr>
+<td>ORM / migraciones</td>
+<td><strong>Drizzle ORM + drizzle-kit</strong> (Better Auth tiene adaptador oficial de Drizzle, así que hay un solo esquema y una sola herramienta de migraciones)</td>
+</tr>
+<tr>
+<td>MCP</td>
+<td><code>@modelcontextprotocol/sdk</code> con transporte <strong>Streamable HTTP</strong> (versión Web-standard <code>Request</code>/<code>Response</code>) montado en <code>/mcp</code></td>
+</tr>
+<tr>
+<td>Auth del MCP</td>
+<td><strong>Tokens API por usuario</strong> (plugin <code>apiKey</code> de Better Auth) enviados como <code>Authorization: Bearer &lt;token&gt;</code></td>
+</tr>
+<tr>
+<td>Roles</td>
+<td><code>admin</code> + <code>member</code></td>
+</tr>
+<tr>
+<td>Tenencia</td>
+<td>Una sola familia por instancia</td>
+</tr>
+<tr>
+<td>Idioma</td>
+<td>UI y datos en <strong>español</strong></td>
+</tr>
+<tr>
+<td>Deploy</td>
+<td><strong>Docker</strong> (app + Postgres) con docker-compose en tu servidor</td>
+</tr>
+<tr>
+<td>Funciones de menú</td>
+<td>Planeador semanal (día × comida), escalado por porciones, suma y conversión de unidades, lista agrupada por pasillo/tienda</td>
+</tr>
+<tr>
+<td>Extras v1</td>
+<td>Fotos de recetas, importar receta desde URL, etiquetas/categorías y favoritos</td>
+</tr>
+</tbody></table>
+<h3>Riesgo importante: autenticación MCP con tokens</h3>
+<ul>
+<li><strong>Claude Code / Claude Desktop / Cursor / clientes con headers:</strong> funcionan directo con <code>Authorization: Bearer</code>.</li>
+<li><strong>Claude.ai (conectores personalizados) y ChatGPT (conectores / developer mode):</strong> priorizan <strong>OAuth</strong> y en general no te dejan poner headers arbitrarios.<ul>
+<li><strong>Plan v1:</strong> también aceptar el token en la ruta, <code>https://menu.rafaymon.com/mcp/t/&lt;token&gt;</code>. Funciona con cualquier cliente, pero la URL pasa a ser secreta: se puede rotar o revocar desde el dashboard.</li>
+<li><strong>Plan v2 (opcional):</strong> activar el plugin OAuth/MCP de Better Auth (<code>oidcProvider</code> / <code>mcp</code>) para tener un flujo OAuth formal, sin cambiar las herramientas.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>2. Arquitectura</h2>
+<pre><code>                ┌───────────────────────────────┐
+ Claude / GPT ─▶│  /mcp  (Streamable HTTP)      │──┐
+                │  auth: API key (Bearer/ruta)  │  │
+                └───────────────────────────────┘  │
+                ┌───────────────────────────────┐  │   ┌──────────────────┐   ┌──────────┐
+ Navegador ────▶│  Dashboard Remix 3 (SSR JSX)  │──┼──▶│  services/*      │──▶│ Postgres │
+                │  auth: sesión Better Auth     │  │   │  (lógica única)  │   └──────────┘
+                └───────────────────────────────┘  │   └──────────────────┘
+                ┌───────────────────────────────┐  │            │
+                │  /api/auth/*  (Better Auth)   │──┘            ▼
+                └───────────────────────────────┘     uploads/ (fotos, volumen)
+</code></pre>
+<p><strong>Principio clave:</strong> toda la lógica de negocio vive en <code>app/services/*</code>. Las acciones del dashboard y las herramientas MCP son capas delgadas que validan la entrada, verifican permisos y llaman al mismo servicio. Así el dashboard y el MCP no pueden comportarse distinto.</p>
+<h3>Integración Better Auth ↔ Remix 3</h3>
+<ul>
+<li><code>auth.handler(request)</code> recibe un <code>Request</code> y regresa un <code>Response</code>, así que se monta tal cual en <code>router.map(&#39;/api/auth/*&#39;, ...)</code>.</li>
+<li>Middleware propio <code>loadSession()</code>: llama a <code>auth.api.getSession({ headers })</code> y pone <code>context.user</code> y <code>context.session</code>.</li>
+<li>Middleware <code>requireUser()</code> / <code>requireAdmin()</code> para proteger controladores.</li>
+<li>Middleware <code>requireApiKey()</code> para <code>/mcp</code>: llama a <code>auth.api.verifyApiKey({ key })</code> y carga el usuario dueño del token.</li>
+<li>Registro público <strong>deshabilitado</strong> (<code>emailAndPassword.disableSignUp: true</code>). Solo el admin crea miembros con <code>auth.api.createUser</code> (plugin <code>admin</code>).</li>
+<li>Seed: el primer admin se crea desde <code>ADMIN_EMAIL</code> y <code>ADMIN_PASSWORD</code> en <code>scripts/seed.ts</code>.</li>
+</ul>
+<hr>
+<h2>3. Estructura del proyecto</h2>
+<pre><code>family-menu/
+├─ app/
+│  ├─ router.ts              # createRouter + middleware global + router.map(...)
+│  ├─ routes.ts              # route map tipado
+│  ├─ actions/               # controladores Remix 3 (dashboard)
+│  │  ├─ controller.tsx      # raíz: /, /login, /logout
+│  │  ├─ recetas/            # CRUD recetas, fotos, importar URL
+│  │  ├─ ingredientes/
+│  │  ├─ menus/
+│  │  ├─ listas/
+│  │  ├─ admin/miembros/
+│  │  └─ cuenta/tokens/
+│  ├─ components/            # JSX remix/component (layout, forms, grid semanal, lista)
+│  ├─ assets/                # entradas cliente (islas hidratadas) + CSS
+│  ├─ auth/
+│  │  ├─ auth.ts             # betterAuth({ database: drizzleAdapter, plugins: [admin(), apiKey()] })
+│  │  └─ middleware.ts       # loadSession, requireUser, requireAdmin, requireApiKey
+│  ├─ db/
+│  │  ├─ client.ts           # pg Pool + drizzle
+│  │  ├─ schema/auth.ts      # generado por @better-auth/cli
+│  │  └─ schema/app.ts       # tablas de dominio
+│  ├─ services/
+│  │  ├─ recipes.ts
+│  │  ├─ ingredients.ts
+│  │  ├─ menus.ts
+│  │  ├─ shopping.ts         # motor de lista del súper
+│  │  ├─ units.ts            # conversión y normalización de unidades
+│  │  ├─ ingredient-parser.ts# &quot;2 tazas de harina cernida&quot; → {qty, unit, name, note}
+│  │  ├─ importer.ts         # JSON-LD schema.org/Recipe desde URL
+│  │  ├─ photos.ts           # remix/file-storage (fs local)
+│  │  └─ members.ts
+│  ├─ mcp/
+│  │  ├─ server.ts           # McpServer + registro de tools/resources/prompts
+│  │  ├─ handler.ts          # transporte Streamable HTTP (Request→Response)
+│  │  └─ tools/{recipes,ingredients,menus,shopping,meta}.ts
+│  └─ lib/{validation.ts, errors.ts, slug.ts, i18n-es.ts}
+├─ drizzle/                  # migraciones SQL
+├─ scripts/seed.ts           # admin, unidades, pasillos, tiendas, ingredientes base
+├─ test/                     # remix test: unidades, motor de lista, MCP e2e
+├─ uploads/                  # (volumen Docker) fotos
+├─ Dockerfile
+├─ docker-compose.yml        # app + postgres:17
+├─ drizzle.config.ts
+├─ .env.example
+└─ README.md
+</code></pre>
+<hr>
+<h2>4. Modelo de datos</h2>
+<h3>Tablas de Better Auth (generadas)</h3>
+<p><code>user</code> (+ <code>role</code>, <code>banned</code> del plugin admin), <code>session</code>, <code>account</code>, <code>verification</code>, <code>apikey</code>.</p>
+<h3>Tablas de dominio</h3>
+<table>
+<thead>
+<tr>
+<th>Tabla</th>
+<th>Campos principales</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>aisle</strong> (pasillo/categoría)</td>
+<td>id, name (&quot;Frutas y verduras&quot;, &quot;Lácteos&quot;, &quot;Carnes&quot;…), sort_order</td>
+</tr>
+<tr>
+<td><strong>store</strong></td>
+<td>id, name (&quot;Costco&quot;, &quot;Súper&quot;, &quot;Mercado&quot;…), sort_order</td>
+</tr>
+<tr>
+<td><strong>unit</strong></td>
+<td>code PK (<code>g</code>,<code>kg</code>,<code>ml</code>,<code>l</code>,<code>pz</code>,<code>taza</code>,<code>cda</code>,<code>cdta</code>,<code>lata</code>,<code>manojo</code>,<code>diente</code>…), name, plural, dimension (<code>mass</code>/<code>volume</code>/<code>count</code>/<code>other</code>), to_base (factor a g, ml o pz)</td>
+</tr>
+<tr>
+<td><strong>ingredient</strong></td>
+<td>id, name (único, normalizado), slug, aliases text[], aisle_id, default_store_id?, default_unit, density_g_per_ml?, grams_per_piece?, notes, created_by</td>
+</tr>
+<tr>
+<td><strong>recipe</strong></td>
+<td>id, title, slug, description, servings, prep_minutes, cook_minutes, steps jsonb (<code>[{text}]</code>), notes, source_url?, family_credit (&quot;Receta de la abuela Lupe&quot;), cover_photo_id?, created_by, updated_by, timestamps</td>
+</tr>
+<tr>
+<td><strong>recipe_ingredient</strong></td>
+<td>id, recipe_id, ingredient_id, quantity numeric? (null = &quot;al gusto&quot;), unit_code?, preparation (&quot;picada&quot;), group_label (&quot;Para la salsa&quot;), optional bool, position</td>
+</tr>
+<tr>
+<td><strong>recipe_photo</strong></td>
+<td>id, recipe_id, storage_key, content_type, width, height, position</td>
+</tr>
+<tr>
+<td><strong>tag</strong></td>
+<td>id, name, slug, kind (<code>category</code>/<code>diet</code>/<code>occasion</code>/<code>free</code>)</td>
+</tr>
+<tr>
+<td><strong>recipe_tag</strong></td>
+<td>recipe_id, tag_id</td>
+</tr>
+<tr>
+<td><strong>favorite</strong></td>
+<td>user_id, recipe_id, created_at</td>
+</tr>
+<tr>
+<td><strong>menu</strong></td>
+<td>id, name, week_start (date, lunes), default_servings, notes, created_by, timestamps</td>
+</tr>
+<tr>
+<td><strong>menu_item</strong></td>
+<td>id, menu_id, date, meal (<code>desayuno</code>/<code>comida</code>/<code>cena</code>/<code>colacion</code>), recipe_id, servings, position, notes</td>
+</tr>
+<tr>
+<td><strong>shopping_list</strong></td>
+<td>id, menu_id?, name, status (<code>abierta</code>/<code>completada</code>), generated_at</td>
+</tr>
+<tr>
+<td><strong>shopping_list_item</strong></td>
+<td>id, list_id, ingredient_id?, label, quantity numeric?, unit_code?, aisle_id?, store_id?, checked, source (<code>generated</code>/<code>manual</code>), source_recipes jsonb, notes</td>
+</tr>
+<tr>
+<td><strong>audit_log</strong></td>
+<td>id, user_id, via (<code>web</code>/<code>mcp</code>), action, entity, entity_id, at</td>
+</tr>
+</tbody></table>
+<p>Índices: búsqueda de texto completo en español (<code>to_tsvector(&#39;spanish&#39;, ...)</code>) sobre recipe.title, description e ingredient names, y <code>pg_trgm</code> para búsqueda difusa de ingredientes y alias.</p>
+<hr>
+<h2>5. Motor de lista del súper (<code>services/shopping.ts</code>)</h2>
+<ol>
+<li>Cargar <code>menu_item</code>s con <code>recipe</code> y <code>recipe_ingredient</code>s.</li>
+<li><strong>Escalar:</strong> <code>factor = item.servings / recipe.servings</code>; <code>qty = ri.quantity * factor</code>. Los ingredientes <code>optional</code> se excluyen por defecto (flag <code>includeOptional</code>).</li>
+<li><strong>Normalizar unidades:</strong> convertir a la unidad base de su dimensión (g, ml, pz).<ul>
+<li>Si cruza dimensiones (taza→g) y el ingrediente tiene <code>density_g_per_ml</code> o <code>grams_per_piece</code>, se convierte. Si no, se deja como renglón separado.</li>
+</ul>
+</li>
+<li><strong>Agrupar y sumar</strong> por <code>(ingredient_id, dimensión)</code>. Las cantidades &quot;al gusto&quot; (null) se agregan una sola vez sin cantidad.</li>
+<li><strong>Humanizar:</strong> 1500 g → 1.5 kg, 750 ml → 750 ml, 2.33 pz → 3 pz (piezas redondeadas hacia arriba).</li>
+<li><strong>Asignar pasillo y tienda</strong> desde el ingrediente; ordenar por <code>store.sort_order</code> y luego <code>aisle.sort_order</code>.</li>
+<li>Guardar <code>source_recipes</code>, por ejemplo <code>[{recipe:&quot;Tinga&quot;, qty:&quot;500 g&quot;}]</code>, para mostrar de dónde sale cada cosa.</li>
+<li><strong>Regenerar</strong> conserva los renglones <code>manual</code> y el estado <code>checked</code> de los renglones que siguen existiendo.</li>
+<li><strong>Exportar</strong> como texto o markdown agrupado (para WhatsApp o Notas) desde el dashboard o el MCP.</li>
+</ol>
+<p>Se cubre con pruebas unitarias exhaustivas: escalado, conversiones, mezcla de unidades, &quot;al gusto&quot; y regeneración.</p>
+<hr>
+<h2>6. Servidor MCP</h2>
+<ul>
+<li>Endpoint: <code>POST/GET /mcp</code> (Bearer) y <code>/mcp/t/:token</code> (token en ruta).</li>
+<li>Sin estado (stateless, un transporte por request) para simplificar el despliegue.</li>
+<li>Cada llamada queda en <code>audit_log</code> con <code>via=&#39;mcp&#39;</code>.</li>
+<li>Descripciones de las herramientas en español, con ejemplos, para que el LLM las use bien.</li>
+</ul>
+<h3>Herramientas</h3>
+<table>
+<thead>
+<tr>
+<th>Dominio</th>
+<th>Herramientas</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Recetas</td>
+<td><code>search_recipes</code> (texto, tags, ingrediente, favoritos), <code>get_recipe</code>, <code>create_recipe</code> (con ingredientes estructurados; crea ingredientes nuevos si no existen), <code>update_recipe</code>, <code>delete_recipe</code>, <code>scale_recipe</code>, <code>toggle_favorite</code>, <code>import_recipe_from_url</code> (regresa borrador para revisar y luego <code>create_recipe</code>)</td>
+</tr>
+<tr>
+<td>Ingredientes</td>
+<td><code>search_ingredients</code>, <code>create_ingredient</code>, <code>update_ingredient</code> (pasillo, tienda, alias, densidad), <code>merge_ingredients</code> (deduplicar)</td>
+</tr>
+<tr>
+<td>Catálogos</td>
+<td><code>list_tags</code>, <code>list_aisles</code>, <code>list_stores</code>, <code>list_units</code></td>
+</tr>
+<tr>
+<td>Menús</td>
+<td><code>list_menus</code>, <code>get_menu</code>, <code>create_menu</code>, <code>add_menu_item</code>, <code>update_menu_item</code>, <code>remove_menu_item</code>, <code>copy_menu</code> (repetir una semana)</td>
+</tr>
+<tr>
+<td>Lista</td>
+<td><code>generate_shopping_list</code>, <code>get_shopping_list</code>, <code>add_list_item</code>, <code>check_list_items</code>, <code>export_shopping_list</code></td>
+</tr>
+<tr>
+<td>Meta</td>
+<td><code>whoami</code></td>
+</tr>
+</tbody></table>
+<p><strong>Resources:</strong> <code>recipe://{slug}</code> (markdown de la receta) y <code>menu://{id}</code>.
+<strong>Prompts:</strong> <code>planear_semana</code> (sugerir el menú con base en favoritos y lo que no se ha repetido) y <code>capturar_receta</code> (dictar una receta familiar).</p>
+<p>La gestión de usuarios <strong>no</strong> se expone por MCP; se hace solo desde el dashboard (por seguridad).</p>
+<hr>
+<h2>7. Dashboard (UI en español)</h2>
+<table>
+<thead>
+<tr>
+<th>Ruta</th>
+<th>Acceso</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/login</code></td>
+<td>público</td>
+<td>Email + contraseña</td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td>miembro</td>
+<td>Menú de la semana actual + accesos rápidos</td>
+</tr>
+<tr>
+<td><code>/recetas</code>, <code>/recetas/nueva</code>, <code>/recetas/:slug</code>, <code>/recetas/:slug/editar</code></td>
+<td>miembro</td>
+<td>Búsqueda, filtros por tag y favoritos, editor de ingredientes con autocompletado, fotos, vista para cocinar</td>
+</tr>
+<tr>
+<td><code>/recetas/importar</code></td>
+<td>miembro</td>
+<td>Pegar una URL → vista previa → guardar</td>
+</tr>
+<tr>
+<td><code>/ingredientes</code></td>
+<td>miembro</td>
+<td>Catálogo, pasillo y tienda, alias, fusionar duplicados</td>
+</tr>
+<tr>
+<td><code>/menus</code>, <code>/menus/:id</code></td>
+<td>miembro</td>
+<td>Cuadrícula semanal día × comida, porciones por platillo, botón &quot;Generar lista&quot;</td>
+</tr>
+<tr>
+<td><code>/listas/:id</code></td>
+<td>miembro</td>
+<td>Lista para usar en el celular, con casillas por pasillo y tienda, agregar a mano, exportar</td>
+</tr>
+<tr>
+<td><code>/catalogos</code></td>
+<td>admin</td>
+<td>Pasillos, tiendas, unidades, tags</td>
+</tr>
+<tr>
+<td><code>/admin/miembros</code></td>
+<td>admin</td>
+<td>Crear miembro, cambiar rol, resetear contraseña, desactivar (ban)</td>
+</tr>
+<tr>
+<td><code>/cuenta</code></td>
+<td>miembro</td>
+<td>Cambiar contraseña, <strong>tokens MCP</strong> (crear, revocar) con snippets listos para Claude Code, Claude Desktop y ChatGPT</td>
+</tr>
+</tbody></table>
+<p>UI: HTML renderizado en servidor con <code>remix/component</code>; formularios nativos; solo se hidratan islas (autocompletado de ingredientes, cuadrícula del menú, casillas de la lista). CSS propio ligero con el mixin <code>css</code> de Remix, mobile-first. Middleware <code>csrf</code> + <code>cop</code> para los formularios.</p>
+<hr>
+<h2>8. Importar receta desde URL (<code>services/importer.ts</code>)</h2>
+<ol>
+<li><code>fetch</code> de la URL (timeout, límite de tamaño, solo http/https, bloqueo de IPs privadas para evitar SSRF).</li>
+<li>Extraer <code>&lt;script type=&quot;application/ld+json&quot;&gt;</code> y buscar <code>@type: Recipe</code> (incluso dentro de <code>@graph</code>).</li>
+<li>Mapear title, description, recipeYield → servings, prepTime y cookTime (ISO 8601), recipeInstructions, image (se descarga como foto) y recipeIngredient[].</li>
+<li><code>ingredient-parser.ts</code> (en español): fracciones (<code>1/2</code>, <code>½</code>, <code>1 ½</code>), unidades y sinónimos (<code>tz</code>, <code>taza(s)</code>, <code>cucharada</code>, <code>cda</code>…), &quot;al gusto&quot;, &quot;una pizca&quot;, y separa la preparación (&quot;picada finamente&quot;).</li>
+<li>Empatar con ingredientes existentes por nombre o alias (trigram). Los que no empatan se marcan como &quot;nuevo&quot; en la vista previa.</li>
+<li>Por MCP, el LLM puede corregir el borrador antes de llamar <code>create_recipe</code>.</li>
+</ol>
+<hr>
+<h2>9. Variables de entorno</h2>
+<pre><code>DATABASE_URL=postgres://family:***@db:5432/family_menu
+BETTER_AUTH_SECRET=...
+BETTER_AUTH_URL=https://menu.rafaymon.com
+ADMIN_EMAIL=...
+ADMIN_PASSWORD=...
+UPLOADS_DIR=/data/uploads
+MCP_ALLOW_PATH_TOKEN=true
+PORT=3010
+</code></pre>
+<p>Puertos locales: app <code>3010</code>, Postgres <code>127.0.0.1:5434</code> (el 5433 ya lo usa cfdi-express-api).</p>
+<hr>
+<h2>10. Fases de implementación</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fase</th>
+<th>Entregables</th>
+<th>Criterio de &quot;hecho&quot;</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>Scaffold</td>
+<td><code>remix new</code>, tsconfig (<code>jsxImportSource: remix/component</code>), docker-compose con Postgres, Drizzle, README, repo en GitHub</td>
+<td><code>npm run dev</code> levanta y <code>/health</code> responde</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Auth y miembros</td>
+<td>Better Auth (admin + apiKey), esquema, login/logout, middleware, seed del admin, <code>/admin/miembros</code></td>
+<td>El admin crea un miembro, el miembro inicia sesión y no ve rutas de admin</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Catálogos e ingredientes</td>
+<td>Unidades, pasillos, tiendas y tags con seed; CRUD de ingredientes; alias; búsqueda</td>
+<td>Los seeds cargan y la búsqueda difusa funciona</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Recetas</td>
+<td>CRUD, editor de ingredientes, fotos, tags, favoritos, búsqueda de texto completo</td>
+<td>Se puede capturar una receta familiar completa con foto</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Menús y lista</td>
+<td>Cuadrícula semanal, motor de lista + pruebas, vista móvil de la lista, exportar</td>
+<td>Un menú de 7 días genera una lista correcta y agrupada</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MCP</td>
+<td>Servidor, todas las tools, tokens en <code>/cuenta</code>, auditoría, pruebas e2e con cliente MCP</td>
+<td>Claude Code crea una receta, arma un menú y genera la lista</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Importar URL</td>
+<td>Importador JSON-LD, parser de ingredientes en español + pruebas, vista previa</td>
+<td>Importa correctamente 5 sitios de recetas populares en español</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Deploy</td>
+<td>Dockerfile multi-stage, compose de producción, volumen de uploads, backups <code>pg_dump</code> (cron), HTTPS (reverse proxy o Cloudflare Tunnel)</td>
+<td>Accesible por HTTPS y conectado desde Claude y ChatGPT</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Pulido (opcional)</td>
+<td>OAuth para MCP, PWA de la lista, sugerencias &quot;no repetir platillos&quot;</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>11. Pruebas</h2>
+<ul>
+<li><strong>Unitarias:</strong> <code>units</code>, <code>ingredient-parser</code>, <code>shopping</code> (el núcleo), <code>importer</code> (con fixtures HTML).</li>
+<li><strong>Integración:</strong> servicios contra Postgres de prueba (contenedor).</li>
+<li><strong>MCP e2e:</strong> <code>@modelcontextprotocol/sdk</code> como cliente contra el servidor, con token válido, inválido y revocado.</li>
+<li><strong>Navegador:</strong> <code>remix test</code> para login, crear receta, generar lista.</li>
+</ul>
+<hr>
+<h2>12. Riesgos y mitigaciones</h2>
+<table>
+<thead>
+<tr>
+<th>Riesgo</th>
+<th>Mitigación</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Remix 3 es muy nuevo (3.0 estable desde oct-2026); hay pocos ejemplos y algunas APIs todavía cambian (<code>@remix-run/ui</code> sigue en 0.x)</td>
+<td>Fijar versiones exactas, no usar <code>@remix-run/ui</code> en v1 y aislar el framework en <code>actions/</code> y <code>components/</code> (los servicios son TS puro)</td>
+</tr>
+<tr>
+<td>Better Auth no tiene integración oficial con Remix 3</td>
+<td>Se usa su <code>handler(Request)</code> estándar y <code>api.getSession</code>, sin depender del framework</td>
+</tr>
+<tr>
+<td>ChatGPT y Claude.ai prefieren OAuth</td>
+<td>Token en ruta para v1; OAuth en la fase 8</td>
+</tr>
+<tr>
+<td>Conversión de unidades ambigua (tazas a gramos)</td>
+<td>Densidad por ingrediente opcional; si falta, se muestra como renglón separado</td>
+</tr>
+<tr>
+<td>Fotos en disco local</td>
+<td>Volumen Docker + backup; <code>remix/file-storage</code> permite cambiar a S3/R2 después</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>13. Decisiones confirmadas</h2>
+<ul>
+<li><strong>Dominio:</strong> <code>menu.rafaymon.com</code> (detrás de reverse proxy o Cloudflare Tunnel; se define en la fase 7).</li>
+<li><strong>Repo:</strong> <code>github.com/rafaremo/family-menu</code>, licencia MIT.</li>
+<li><strong>Tiendas iniciales (seed):</strong> Costco, City Market, Amazon, Tiendita, Otros.</li>
+<li><strong>Pasillos iniciales (seed):</strong> Frutas y verduras, Carnes y pescados, Salchichonería, Lácteos y huevo, Panadería y tortillas, Abarrotes, Especias y condimentos, Enlatados, Congelados, Bebidas, Limpieza, Otros.</li>
+</ul>
+<h2>14. Estado</h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> <strong>Fase 0 — Scaffold</strong> (<code>remix new</code>, Drizzle, Postgres en Docker, <code>/health</code>, Dockerfile, MIT)</li>
+<li><input disabled="" type="checkbox"> Fase 1 — Auth y miembros</li>
+</ul>
+</main></body></html>
