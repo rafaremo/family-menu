@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/remix/schema/remix.json",
+  "test": {
+    // Las pruebas comparten una BD Postgres de prueba: se corren en serie.
+    "concurrency": 1,
+    "setup": "./test/setup.ts",
+  },
+}

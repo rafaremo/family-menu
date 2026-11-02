@@ -1,5 +1,4 @@
 import type { Handle, RemixNode } from 'remix/component'
-import { css } from 'remix/component'
 import { ImportMap } from 'remix/component/server'
 
 import { scriptEntry } from '../assets.ts'
@@ -10,11 +9,11 @@ export interface DocumentProps {
   title?: string
 }
 
-const DEFAULT_TITLE = readAppDisplayName('Family%20Menu')
+const APP_NAME = 'Family Menu'
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { children, head, title = DEFAULT_TITLE } = handle.props
+    let { children, head, title } = handle.props
     let { href, importMap, preloads } = scriptEntry
 
     return (
@@ -24,7 +23,8 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="color-scheme" content="light dark" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-          <title>{title}</title>
+          <link rel="stylesheet" href="/styles.css" />
+          <title>{title ? `${title} · ${APP_NAME}` : APP_NAME}</title>
           {head}
           <ImportMap value={importMap} />
           {preloads.map((preloadHref) => (
@@ -32,12 +32,8 @@ export function Document(handle: Handle<DocumentProps>) {
           ))}
           <script type="module" src={href}></script>
         </head>
-        <body mix={css({ margin: 0 })}>{children}</body>
+        <body>{children}</body>
       </html>
     )
   }
-}
-
-function readAppDisplayName(value: string): string {
-  return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)
 }

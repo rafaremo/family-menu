@@ -18,6 +18,8 @@ cp .env.example .env      # y llena BETTER_AUTH_SECRET (openssl rand -hex 32)
 npm i
 npm run db:up             # Postgres en 127.0.0.1:5434
 npm run db:migrate
+# pon ADMIN_EMAIL / ADMIN_PASSWORD en .env y crea el primer admin:
+npm run db:seed
 npm run dev               # http://localhost:3010  (o npm run hmr)
 ```
 
@@ -25,7 +27,9 @@ npm run dev               # http://localhost:3010  (o npm run hmr)
 |---|---|
 | `npm run dev` / `hmr` | Servidor de desarrollo (watch / HMR) |
 | `npm start` | Producción (sin build) |
-| `npm test` | Pruebas (`remix test`) |
+| `npm test` | Pruebas (`remix test`, BD `family_menu_test`) |
+| `npm run db:seed` | Crea el admin inicial (idempotente) |
+| `npm run auth:generate` | Regenera el esquema de Better Auth |
 | `npm run typecheck` | TypeScript |
 | `npm run db:generate` / `db:migrate` / `db:studio` | Drizzle |
 

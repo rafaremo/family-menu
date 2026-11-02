@@ -5,3 +5,4 @@ tmp/
 .env
 uploads/
 dist/
+.agent-view/

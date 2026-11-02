@@ -279,4 +279,5 @@ Puertos locales: app `3010`, Postgres `127.0.0.1:5434` (el 5433 ya lo usa cfdi-e
 
 ## 14. Estado
 - [x] **Fase 0 — Scaffold** (`remix new`, Drizzle, Postgres en Docker, `/health`, Dockerfile, MIT)
-- [ ] Fase 1 — Auth y miembros
+- [x] **Fase 1 — Auth y miembros** (Better Auth + admin/apiKey, login/logout, `/admin/miembros`, `/cuenta`, seed del admin, bitácora, 17 pruebas)
+- [ ] Fase 2 — Catálogos e ingredientes
