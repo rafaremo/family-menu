@@ -46,6 +46,7 @@ GitHub (rafaremo/family-menu) ──push──▶ Coolify build (Dockerfile)
 | `R2_PREFIX` | `family-menu` |
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | token R2 *Object Read & Write* limitado al bucket |
 | `MCP_ALLOW_PATH_TOKEN` | `true` (Claude.ai / ChatGPT) o `false` |
+| `API_CORS_ORIGINS` | Opcional. Orígenes que pueden leer la API REST de listas desde el navegador (coma), o `*` (default). Ver `docs/API.md` |
 | `APP_TIMEZONE` | `America/Mexico_City` (default) |
 
    La imagen ya define `NODE_ENV=production`, `PORT=3000` y `TRUST_PROXY=true`. **No copies `PORT=3010`

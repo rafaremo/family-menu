@@ -14,6 +14,13 @@ export const routes = route({
     withToken: '/mcp/t/:token',
   },
 
+  // API REST de solo lectura (pantallas/widgets). Bearer token; cualquier método para responder
+  // OPTIONS (preflight CORS) y 405 en lo demás.
+  api: route('/api/v1', {
+    lists: '/listas',
+    list: '/listas/:id',
+  }),
+
   login: form('/login'),
   logout: post('/logout'),
 

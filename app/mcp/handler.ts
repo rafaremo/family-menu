@@ -39,6 +39,9 @@ export async function handleMcpRequest(request: Request, pathToken?: string): Pr
     if (check.reason === 'rate_limited') return jsonRpcError(429, 'Demasiadas peticiones con este token; espera un minuto.', { 'Retry-After': '60' })
     return jsonRpcError(401, UNAUTHORIZED[check.reason]!, { 'WWW-Authenticate': 'Bearer realm="family-menu"' })
   }
+  if (check.scope !== 'full') {
+    return jsonRpcError(403, 'Este token es de solo lectura de listas (API REST); no sirve para el MCP.')
+  }
 
   // Sin estado: GET (stream SSE independiente) y DELETE (cerrar sesión) no aplican.
   if (request.method !== 'POST') {

@@ -5,13 +5,13 @@ import { createController } from 'remix/router'
 
 import { auth } from '../../auth/auth.ts'
 import { requireUser, sessionAuth, type Identity } from '../../auth/middleware.ts'
-import { toUserMessage } from '../../lib/errors.ts'
+import { toUserMessage, UserFacingError } from '../../lib/errors.ts'
 import { publicUrl } from '../../lib/url.ts'
 import { parseForm, passwordField, readText } from '../../lib/validation.ts'
 import { pathTokensAllowed } from '../../mcp/handler.ts'
 import { routes } from '../../routes.ts'
 import { audit } from '../../services/audit.ts'
-import { createToken, listTokens, revokeToken } from '../../services/tokens.ts'
+import { createToken, isTokenScope, listTokens, revokeToken } from '../../services/tokens.ts'
 import { AccountPage, type AccountPageProps } from './page.tsx'
 
 const passwordSchema = z
@@ -85,10 +85,20 @@ export default createController(routes.account, {
     async tokenCreate(context) {
       let user = context.auth.identity
       let days = Number(readText(context.formData, 'expiresInDays')) || null
+      let rawScope = readText(context.formData, 'scope') || 'full'
       try {
-        let token = await createToken({ userId: user.id, via: 'web' }, { name: readText(context.formData, 'name'), expiresInDays: days })
+        if (!isTokenScope(rawScope)) throw new UserFacingError('Tipo de token inválido.')
+        let token = await createToken(
+          { userId: user.id, via: 'web' },
+          { name: readText(context.formData, 'name'), expiresInDays: days, scope: rawScope },
+        )
         // El token completo solo existe en esta respuesta: que nadie la guarde en caché.
-        return renderAccount(context, user, { newToken: { name: token.name, key: token.key } }, { headers: { 'Cache-Control': 'no-store' } })
+        return renderAccount(
+          context,
+          user,
+          { newToken: { name: token.name, key: token.key, scope: token.scope } },
+          { headers: { 'Cache-Control': 'no-store' } },
+        )
       } catch (error) {
         return renderAccount(context, user, { errors: { name: toUserMessage(error) } }, { status: 400 })
       }

@@ -3,7 +3,7 @@ import type { Handle } from 'remix/component'
 import type { Identity } from '../../auth/middleware.ts'
 import type { FieldErrors } from '../../lib/validation.ts'
 import { routes } from '../../routes.ts'
-import { TOKEN_EXPIRY_OPTIONS, type TokenSummary } from '../../services/tokens.ts'
+import { TOKEN_EXPIRY_OPTIONS, TOKEN_SCOPE_LABELS, TOKEN_SCOPES, type TokenScope, type TokenSummary } from '../../services/tokens.ts'
 import { Flash, Layout } from '../../ui/layout.tsx'
 import { PasswordInput } from '../../ui/form.tsx'
 import { McpConnect } from '../../ui/mcp-connect.tsx'
@@ -11,6 +11,7 @@ import { McpConnect } from '../../ui/mcp-connect.tsx'
 export interface NewToken {
   name: string
   key: string
+  scope: TokenScope
 }
 
 export interface AccountPageProps {
@@ -60,6 +61,32 @@ function NewTokenPanel(handle: Handle<{ token: NewToken; baseUrl: string; pathTo
       2,
     )
     let generic = JSON.stringify({ mcpServers: { 'family-menu': { url: endpoint, headers: { Authorization: `Bearer ${token.key}` } } } }, null, 2)
+
+    if (token.scope === 'lists:read') {
+      let fetchSnippet = `const res = await fetch('${baseUrl}/api/v1/listas/actual', {\n  headers: { Authorization: 'Bearer ${token.key}' },\n})\nconst lista = await res.json()\n// lista.open, lista.pending, lista.items[] { label, amount, checked, store, aisle }`
+      return (
+        <section class="card new-token" aria-live="polite">
+          <h3 class="card-title">🔑 Token “{token.name}” creado (solo leer listas)</h3>
+          <p>
+            <strong>Cópialo ahora:</strong> por seguridad no lo volverás a ver. Si lo pierdes, revócalo y crea otro.
+          </p>
+          <div class="row nowrap">
+            <input id="new-token-key" readOnly value={token.key} aria-label="Token" class="mono" />
+            <button type="button" class="secondary small" data-copy="#new-token-key">
+              Copiar
+            </button>
+          </div>
+          <p class="muted small">
+            Sirve solo para consultar listas (no puede cambiar nada ni usarse en el MCP). Endpoints:{' '}
+            <code>GET /api/v1/listas</code> (todas, con <code>?estado=abierta</code> o <code>completada</code>),{' '}
+            <code>GET /api/v1/listas/actual</code> y <code>GET /api/v1/listas/:id</code>.
+          </p>
+          <Snippet id="snip-curl" title="Probar con curl" code={`curl -H "Authorization: Bearer ${token.key}" \\\n  ${baseUrl}/api/v1/listas`} open />
+          <Snippet id="snip-fetch" title="Desde un dashboard web (JavaScript)" code={fetchSnippet} />
+        </section>
+      )
+    }
+
     return (
       <section class="card new-token" aria-live="polite">
         <h3 class="card-title">🔑 Token “{token.name}” creado</h3>
@@ -116,7 +143,8 @@ export function AccountPage(handle: Handle<AccountPageProps>) {
         <h2 id="tokens">Tokens para Claude / ChatGPT (MCP)</h2>
         <p class="muted">
           Con un token, un asistente puede consultar y editar recetas, menús y listas en tu nombre (no puede administrar
-          miembros). Crea uno por app o dispositivo para poder revocarlos por separado.
+          miembros). Crea uno por app o dispositivo para poder revocarlos por separado. Para una pantalla o widget que
+          solo muestra las listas del súper, usa el tipo <strong>Solo leer listas</strong> (API REST, no puede cambiar nada).
         </p>
 
         <McpConnect baseUrl={baseUrl} pathTokensAllowed={pathTokensAllowed} />
@@ -139,7 +167,8 @@ export function AccountPage(handle: Handle<AccountPageProps>) {
                 {tokens.map((t) => (
                   <tr key={t.id}>
                     <td>
-                      <strong>{t.name}</strong>
+                      <strong>{t.name}</strong>{' '}
+                      {t.scope === 'full' ? null : <span class="badge">{TOKEN_SCOPE_LABELS[t.scope]}</span>}
                       {t.start ? <div class="muted small mono">{t.start}…</div> : null}
                     </td>
                     <td data-label="Creado" class="small">
@@ -175,6 +204,16 @@ export function AccountPage(handle: Handle<AccountPageProps>) {
             <label htmlFor="token-name">Nombre del token</label>
             <input id="token-name" name="name" required maxLength={60} placeholder="Claude Code en mi laptop" />
             {errors.name ? <p class="field-error">{errors.name}</p> : null}
+          </div>
+          <div>
+            <label htmlFor="token-scope">Tipo</label>
+            <select id="token-scope" name="scope">
+              {TOKEN_SCOPES.map((s) => (
+                <option key={s} value={s}>
+                  {TOKEN_SCOPE_LABELS[s]}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label htmlFor="token-expiry">Vence en</label>

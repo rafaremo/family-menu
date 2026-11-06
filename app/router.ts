@@ -4,6 +4,7 @@ import { staticFiles } from 'remix/middleware/static'
 import { createRouter, type RouterContext } from 'remix/router'
 
 import accountController from './actions/account/controller.tsx'
+import apiController from './actions/api/controller.ts'
 import membersController from './actions/admin/members/controller.tsx'
 import catalogsController from './actions/catalogs/controller.tsx'
 import ingredientsController from './actions/ingredients/controller.tsx'
@@ -40,6 +41,7 @@ router.map(routes, controller)
 router.map(routes.dashboard, dashboardController)
 router.map(routes.login, loginController)
 router.map(routes.mcp, mcpController)
+router.map(routes.api, apiController)
 router.map(routes.account, accountController)
 router.map(routes.ingredients, ingredientsController)
 router.map(routes.recipes, recipesController)

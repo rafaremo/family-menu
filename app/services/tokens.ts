@@ -13,9 +13,41 @@ import { audit, type ServiceActor } from './audit.ts'
  * al crearlo; en la BD queda su hash. Revocar = borrar.
  */
 
+/**
+ * Alcance de un token (se guarda en `apikey.metadata`):
+ * - `full`: MCP completo (recetas, menús, listas). Tokens viejos sin metadata = `full`.
+ * - `lists:read`: solo la API REST de listas en modo lectura (pantallas, widgets). No sirve para el MCP.
+ */
+export const TOKEN_SCOPES = ['full', 'lists:read'] as const
+export type TokenScope = (typeof TOKEN_SCOPES)[number]
+
+export const TOKEN_SCOPE_LABELS: Record<TokenScope, string> = {
+  full: 'MCP completo',
+  'lists:read': 'Solo leer listas',
+}
+
+export function isTokenScope(value: unknown): value is TokenScope {
+  return typeof value === 'string' && (TOKEN_SCOPES as readonly string[]).includes(value)
+}
+
+/** Lee el alcance de la metadata (texto JSON en la BD u objeto ya parseado por Better Auth). */
+export function scopeFromMetadata(metadata: unknown): TokenScope {
+  let data = metadata
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data)
+    } catch {
+      return 'full'
+    }
+  }
+  let scope = (data as { scope?: unknown } | null)?.scope
+  return isTokenScope(scope) ? scope : 'full'
+}
+
 export interface TokenSummary {
   id: string
   name: string
+  scope: TokenScope
   /** Primeros caracteres, para reconocerlo ("fm_kEq…"). */
   start: string | null
   createdAt: Date
@@ -41,27 +73,35 @@ export async function listTokens(userId: string): Promise<TokenSummary[]> {
       lastUsedAt: apikey.lastRequest,
       expiresAt: apikey.expiresAt,
       enabled: apikey.enabled,
+      metadata: apikey.metadata,
     })
     .from(apikey)
     .where(eq(apikey.referenceId, userId))
     .orderBy(desc(apikey.createdAt))
-  return rows.map((r) => ({ ...r, name: r.name ?? 'Sin nombre', enabled: r.enabled ?? true }))
+  return rows.map(({ metadata, ...r }) => ({
+    ...r,
+    name: r.name ?? 'Sin nombre',
+    enabled: r.enabled ?? true,
+    scope: scopeFromMetadata(metadata),
+  }))
 }
 
 export async function createToken(
   actor: ServiceActor & { userId: string },
-  input: { name: string; expiresInDays?: number | null },
-): Promise<{ id: string; key: string; name: string }> {
+  input: { name: string; expiresInDays?: number | null; scope?: TokenScope },
+): Promise<{ id: string; key: string; name: string; scope: TokenScope }> {
   let name = cleanText(input.name).slice(0, 60)
   if (!name) throw new UserFacingError('Ponle un nombre al token (p. ej. "Claude Code de Rafa").')
   let days = input.expiresInDays ?? null
   if (days !== null && (!Number.isInteger(days) || days < 1 || days > 3650)) throw new UserFacingError('Vigencia inválida.')
+  let scope = input.scope ?? 'full'
+  if (!isTokenScope(scope)) throw new UserFacingError('Tipo de token inválido.')
 
   let created = await auth.api.createApiKey({
-    body: { userId: actor.userId, name, ...(days ? { expiresIn: days * 24 * 60 * 60 } : {}) },
+    body: { userId: actor.userId, name, metadata: { scope }, ...(days ? { expiresIn: days * 24 * 60 * 60 } : {}) },
   })
-  await audit({ ...actor, action: 'create', entity: 'mcp_token', entityId: created.id, details: { name, days } })
-  return { id: created.id, key: created.key, name }
+  await audit({ ...actor, action: 'create', entity: 'mcp_token', entityId: created.id, details: { name, days, scope } })
+  return { id: created.id, key: created.key, name, scope }
 }
 
 export async function revokeToken(actor: ServiceActor & { userId: string }, tokenId: string): Promise<void> {
@@ -74,7 +114,7 @@ export async function revokeToken(actor: ServiceActor & { userId: string }, toke
 }
 
 export type TokenCheck =
-  | { ok: true; identity: Identity; tokenId: string }
+  | { ok: true; identity: Identity; tokenId: string; scope: TokenScope }
   | { ok: false; reason: 'missing' | 'invalid' | 'rate_limited' | 'banned' }
 
 /** Verifica un token MCP y regresa la identidad de su dueño. */
@@ -93,6 +133,7 @@ export async function verifyToken(key: string | null | undefined): Promise<Token
   return {
     ok: true,
     tokenId: result.key.id,
+    scope: scopeFromMetadata(result.key.metadata),
     identity: { id: owner.id, name: owner.name, email: owner.email, role: toRole(owner.role) },
   }
 }
