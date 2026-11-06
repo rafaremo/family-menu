@@ -80,7 +80,8 @@ jobs:
             echo "::error::Faltan los secretos COOLIFY_TOKEN y/o COOLIFY_WEBHOOK."
             exit 1
           fi
-          status=$(curl -sS -o response.json -w '%{http_code}' --max-time 60 \
+          # Coolify v4 recientes exigen POST en /api/v1/deploy (GET responde 405).
+          status=$(curl -sS -X POST -o response.json -w '%{http_code}' --max-time 60 \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             "$COOLIFY_WEBHOOK")
           cat response.json; echo
