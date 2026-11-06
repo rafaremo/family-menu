@@ -85,8 +85,20 @@ Con el proxy de Cloudflare apagado, Coolify emite el certificado de Let's Encryp
 
 ## Actualizaciones
 
-`git push` a `main` → Coolify reconstruye (activa *Auto Deploy* / webhook de GitHub). Las migraciones
-nuevas se aplican solas al arrancar. Para revertir, *Rollback* en Coolify a la imagen anterior
+`git push` a `main` → GitHub Actions (`.github/workflows/deploy.yml`) corre typecheck y pruebas
+contra un Postgres temporal y, **solo si pasan**, llama al webhook de deploy de Coolify. En los PR solo
+corre la verificación; también se puede lanzar a mano desde *Actions → CI y deploy → Run workflow*.
+
+Configuración (una vez):
+
+1. Coolify → *Keys & Tokens → API tokens*: crea un token con permiso **deploy**.
+2. GitHub → *Settings → Secrets and variables → Actions*:
+   - `COOLIFY_TOKEN`: el token anterior.
+   - `COOLIFY_WEBHOOK`: `https://deploy.acromatico.dev/api/v1/deploy?uuid=<uuid-de-la-app>&force=false`
+     (en Coolify: la app → *Webhooks → Deploy Webhook*).
+3. En la app de Coolify **desactiva *Auto Deploy*** para que no se despliegue dos veces (ni sin pasar las pruebas).
+
+Las migraciones nuevas se aplican solas al arrancar. Para revertir, *Rollback* en Coolify a la imagen anterior
 (las migraciones son aditivas; revisa antes si una versión borró columnas).
 
 ## Notas de seguridad

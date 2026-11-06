@@ -1,0 +1,91 @@
+name: CI y deploy
+
+# En cada push a main: typecheck + pruebas y, si pasan, deploy en Coolify vía webhook.
+# En pull requests solo corre la verificación. También se puede lanzar a mano (Actions → Run workflow).
+#
+# Secretos del repo (Settings → Secrets and variables → Actions):
+#   COOLIFY_TOKEN    Token de la API de Coolify con permiso de deploy (Keys & Tokens → API tokens)
+#   COOLIFY_WEBHOOK  URL del webhook de la app, p. ej.
+#                    https://deploy.acromatico.dev/api/v1/deploy?uuid=<uuid>&force=false
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Typecheck y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: family
+          POSTGRES_PASSWORD: family
+          POSTGRES_DB: family_menu
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U family -d family_menu"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgres://family:family@127.0.0.1:5432/family_menu_test
+      BETTER_AUTH_SECRET: ci-secret-solo-para-pruebas-0123456789abcdef
+      BETTER_AUTH_URL: http://localhost:3010
+      UPLOADS_DIR: ./uploads-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  deploy:
+    name: Deploy en Coolify
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Disparar deploy
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+        run: |
+          if [ -z "$COOLIFY_TOKEN" ] || [ -z "$COOLIFY_WEBHOOK" ]; then
+            echo "::error::Faltan los secretos COOLIFY_TOKEN y/o COOLIFY_WEBHOOK."
+            exit 1
+          fi
+          status=$(curl -sS -o response.json -w '%{http_code}' --max-time 60 \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            "$COOLIFY_WEBHOOK")
+          cat response.json; echo
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Coolify respondió HTTP $status"
+            exit 1
+          fi
+          echo "Deploy encolado en Coolify ($GITHUB_SHA)."
