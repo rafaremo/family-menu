@@ -17,6 +17,7 @@ const INSTRUCTIONS = `Family Menu: recetario familiar, menús semanales y lista 
 - Las cantidades van estructuradas: quantity + unit (g, kg, ml, l, taza, cda, cdta, pz, lata, manojo, diente…).
 - Para recetas de internet: import_recipe_from_url → revisar con el usuario → create_recipe (con source_url e image_url).
 - Flujo típico: create_menu (semana) → add_menu_item por día y comida → generate_shopping_list → export_shopping_list.
+- Las listas también pueden nacer sin menú: create_shopping_list (p. ej. ferretería) y luego add_list_item; list_shopping_lists las muestra todas.
 - Las fechas son AAAA-MM-DD; las semanas empiezan en lunes. Hoy es ${todayIso()}.
 - No borres nada sin confirmarlo con el usuario.`
 

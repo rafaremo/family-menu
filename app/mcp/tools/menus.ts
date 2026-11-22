@@ -18,6 +18,7 @@ import {
 } from '../../services/menus.ts'
 import {
   addManualItem,
+  createList,
   exportListText,
   generateListForMenu,
   getList,
@@ -180,6 +181,32 @@ export function registerMenuTools(server: McpServer, ctx: McpContext) {
   defineTool(
     server,
     ctx,
+    'create_shopping_list',
+    {
+      title: 'Crear lista suelta',
+      description: 'Crea una lista de compras sin menú, solo con nombre. Útil para ferretería, Navidad, etc. Luego agrega renglones con add_list_item.',
+      inputSchema: { name: z.string().min(1).describe('Nombre de la lista: "Ferretería".') },
+    },
+    async (args) => listJson(await createList(ctx.actor, args.name)),
+  )
+
+  defineTool(
+    server,
+    ctx,
+    'list_shopping_lists',
+    {
+      title: 'Listas del súper',
+      description: 'Todas las listas del súper (con menú o sueltas), las más recientes primero.',
+      inputSchema: {},
+      annotations: { readOnlyHint: true },
+    },
+    async () =>
+      (await listLists(30)).map((l) => ({ id: l.id, name: l.name, status: l.status, menuId: l.menuId, menuName: l.menuName, total: l.total, checked: l.checked })),
+  )
+
+  defineTool(
+    server,
+    ctx,
     'get_shopping_list',
     {
       title: 'Ver lista del súper',
@@ -189,7 +216,7 @@ export function registerMenuTools(server: McpServer, ctx: McpContext) {
     },
     async (args) => {
       let id = args.list_id ?? (await listLists(20)).find((l) => l.status === 'abierta')?.id
-      if (!id) throw new UserFacingError('No hay listas abiertas. Genera una con generate_shopping_list.', 404)
+      if (!id) throw new UserFacingError('No hay listas abiertas. Genera una con generate_shopping_list o crea una suelta con create_shopping_list.', 404)
       return listJson(await getList(id))
     },
   )
