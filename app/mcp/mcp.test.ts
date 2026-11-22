@@ -100,6 +100,7 @@ describe('MCP', () => {
       'list_tags', 'list_aisles', 'list_stores', 'list_units',
       'list_menus', 'get_menu', 'create_menu', 'add_menu_item', 'update_menu_item', 'remove_menu_item', 'copy_menu',
       'generate_shopping_list', 'get_shopping_list', 'add_list_item', 'check_list_items', 'export_shopping_list',
+      'create_shopping_list', 'list_shopping_lists',
       'import_recipe_from_url',
     ]) {
       assert.ok(names.includes(expected), `falta la herramienta ${expected}`)
@@ -201,6 +202,34 @@ describe('MCP', () => {
     assert.ok(logs.some((l) => l.entity === 'recipe' && l.action === 'create'))
     assert.ok(logs.some((l) => l.entity === 'shopping_list' && l.action === 'generate'))
     assert.ok(logs.filter((l) => l.action === 'tool_call').length >= 10)
+  })
+
+  it('creates a standalone list without a menu and finds it', async () => {
+    let client = await connect()
+
+    let created = await call(client, 'create_shopping_list', { name: 'Ferretería' })
+    assert.equal(created.isError, false, created.text)
+    assert.equal(created.json.name, 'Ferretería')
+    assert.equal(created.json.menuId, null)
+    assert.equal(created.json.progress, '0/0')
+
+    let lists = await call(client, 'list_shopping_lists')
+    assert.equal(lists.isError, false, lists.text)
+    let found = lists.json.find((l: any) => l.id === created.json.id)
+    assert.ok(found, 'la lista suelta aparece en list_shopping_lists')
+    assert.equal(found.menuId, null)
+    assert.equal(found.status, 'abierta')
+
+    let added = await call(client, 'add_list_item', { list_id: created.json.id, label: 'papel de baño', quantity: 1, unit: 'paquete' })
+    assert.equal(added.isError, false, added.text)
+
+    let seen = await call(client, 'get_shopping_list', { list_id: created.json.id })
+    assert.equal(seen.json.name, 'Ferretería')
+    assert.match(seen.text, /papel de baño/)
+
+    // La creación quedó en la bitácora como "mcp".
+    let logs = await db.select().from(auditLog).where(and(eq(auditLog.via, 'mcp'), eq(auditLog.userId, memberId)))
+    assert.ok(logs.some((l) => l.entity === 'shopping_list' && l.action === 'create'))
   })
 
   it('returns Spanish errors the model can act on', async () => {
